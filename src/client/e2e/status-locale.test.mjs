@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {resolveStatusLocale,withStatusLanguage} from '../src/pages/workbench/status/locale.mjs';
+test('explicit link language overrides stored and browser preferences',()=>{assert.equal(resolveStatusLocale('?lang=zh-CN','en',['en-US']),'zh-CN');assert.equal(resolveStatusLocale('?lang=en','zh-CN',['zh-CN']),'en');});
+test('manual preference survives and first use follows a supported browser language',()=>{assert.equal(resolveStatusLocale('','zh-CN',['en-US']),'zh-CN');assert.equal(resolveStatusLocale('',null,['zh-CN']),'zh-CN');assert.equal(resolveStatusLocale('',null,['fr-FR','zh-Hans']),'zh-CN');assert.equal(resolveStatusLocale('',null,['fr-FR']),'en');assert.equal(resolveStatusLocale('?lang=invalid',null,['zh-TW']),'zh-CN');});
+test('language choice creates shareable canonical URL without dropping other state',()=>{assert.equal(withStatusLanguage('https://example.test/demo/index.html?x=1#section','zh-CN'),'https://example.test/demo/index.html?x=1&lang=zh-CN#section');});
