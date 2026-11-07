@@ -8,6 +8,9 @@
 
 ## 2026-11-08
 
+- Introduce a common operations port with eMAG as the sole enabled adapter; remove Amazon-specific product code, algorithms, skills, providers and startup jobs. Preserve historical/private state and reject explicit retired task references before dispatch.
+
+
 - Replace the public demo and authenticated landing with a novice-friendly bilingual status home: one clear status, three evidence figures, subtle motion and a pausable carousel. Chat and detail tools remain secondary; actual task/evidence freshness controls production states.
 
 

@@ -17,7 +17,10 @@ export function createDemoState() {
   const transitions = { pending: 'proposed', proposed: 'approved', approved: 'executed', executed: 'reviewed' };
   function request(method, path, body = {}) {
     let result;
-    if (method === 'GET' && path === '/emag/stores') result = [{ store_id: 'demo-ro' }];
+    const platform = { platform: 'emag', platform_label: 'eMAG', marketplace: 'RO', currency: 'RON', timezone: 'Europe/Bucharest' };
+    if (method === 'GET' && path === '/operations/stores') result = [{ store_id: meta.store_id, captured_at: meta.captured_at, ...platform }];
+    else if (method === 'GET' && path === '/operations/stores/demo-ro/overview') result = { ...meta, ...platform, metrics: { products: offers.length, issues: issues.length, stock: offers.reduce((sum, offer) => sum + offer.general_stock, 0) }, collection: null };
+    else if (method === 'GET' && path === '/emag/stores') result = [{ store_id: 'demo-ro' }];
     else if (method === 'GET' && path === '/emag/stores/demo-ro') result = { ...meta, summary, commercial_summary, issues, records };
     else if (method === 'GET' && path === '/emag/stores/demo-ro/workspace') result = { ...meta, summary, commercial_summary, offers, issues, drafts };
     else if (method === 'GET' && path === '/emag/stores/demo-ro/job') result = { status: 'complete', mode: 'existing_snapshot', stage: 'complete', snapshot_id: 'demo-v1', delta_available: false };

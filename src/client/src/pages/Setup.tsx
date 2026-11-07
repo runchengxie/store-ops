@@ -6,7 +6,7 @@
  *   0. Welcome
  *   1. Agent Detection + install
  *   2. Global fallback model (assistant slot) — makes AI work without a local agent
- *   3. API Keys (apimart + optional sorftime)
+ *   3. API Keys (apimart)
  *   4. 试跑一次 —— 让用户在离开向导之前**看到一个真实产出**
  *   5. Done
  *
@@ -276,7 +276,7 @@ function StepWelcome({ onNext }: { onNext: () => void }) {
       >
         {[
           ["🤖", "AI Agent", "IvyeaAgent 内置运行"],
-          ["🔍", "市场调研", "Sorftime 数据 + AI 分析"],
+          ["🔍", "市场调研", "eMAG 商品证据与来源记录"],
           ["🖼", "Listing 生成", "图片 + 文案一体化"],
           ["🧠", "知识库", "上传文档 + 本地检索"],
         ].map(([icon, name, desc]) => (
@@ -531,7 +531,6 @@ function StepApiKeys({
   onNext: () => void;
 }) {
   const [apimartKey, setApimartKey] = useState("");
-  const [sortimeKey, setSortimeKey] = useState("");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
 
@@ -541,7 +540,6 @@ function StepApiKeys({
     try {
       const patch: Record<string, string> = {};
       if (apimartKey.trim()) patch.apimart_key = apimartKey.trim();
-      if (sortimeKey.trim()) patch.sorftime_key = sortimeKey.trim();
       if (Object.keys(patch).length > 0) {
         await patchSettings(patch as any);
       }
@@ -587,33 +585,6 @@ function StepApiKeys({
         <div style={S.hint}>
           登录 apimart.ai → 控制台 → API Keys 获取。用于图片生成（gpt-image-2）。
         </div>
-      </div>
-
-      <div style={{ marginBottom: 16 }}>
-        <label style={S.label}>
-          Sorftime 市场数据密钥{" "}
-          <span
-            style={{
-              fontSize: "var(--fs-9)",
-              padding: "1px 5px",
-              background: "rgba(251,191,36,.1)",
-              color: "var(--amber)",
-              borderRadius: 8,
-              border: "1px solid rgba(251,191,36,.2)",
-            }}
-          >
-            可选
-          </span>
-        </label>
-        <input
-          style={S.input}
-          type="password"
-          value={sortimeKey}
-          onChange={(e) => setSortimeKey(e.target.value)}
-          placeholder="bho5v... （可后填）"
-          autoComplete="off"
-        />
-        <div style={S.hint}>用于市场调研模块的销量、关键词、广告位数据。</div>
       </div>
 
       {err && (
@@ -764,7 +735,7 @@ function StepDone({ onFinish }: { onFinish: () => void }) {
           {[
             ["工作台", "在 /agents 管理 Agent 会话"],
             ["系统配置", "随时补充密钥和集成路径"],
-            ["市场调研", "开始你的第一次 ASIN 分析"],
+            ["市场调研", "查看店铺快照与待核实事项"],
           ].map(([name, desc]) => (
             <div
               key={name}

@@ -44,7 +44,6 @@ const ICONS: Record<string, LucideIcon> = {
   listing: LayoutTemplate,
   translate: Languages,
   analysis: BarChart3,
-  lingxing: Database,
   skill: Sparkles,
   assistant: MessageCircleQuestion,
   imagegen: ImageIcon,

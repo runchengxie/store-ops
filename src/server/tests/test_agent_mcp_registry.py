@@ -95,13 +95,13 @@ def test_listing_redacts_secrets(mcp_file):
     assert "SECRET" in mcp_file.read_text("utf-8")
 
 
-def test_managed_servers_are_flagged(mcp_file):
+def test_external_servers_are_not_application_managed(mcp_file):
     """由数据源密钥自动同步的那几台要标出来 —— 删了下次保存设置又会回来，
     UI 不说清楚用户会以为删除失败。"""
     agent_mcp.upsert_server("sorftime", {"transport": "http", "url": "https://s"})
     agent_mcp.upsert_server("mine", {"transport": "http", "url": "https://m"})
     rows = {r["name"]: r for r in agent_mcp.list_servers()}
-    assert rows["sorftime"]["managed"] is True
+    assert rows["sorftime"]["managed"] is False
     assert rows["mine"]["managed"] is False
 
 
@@ -130,7 +130,7 @@ def test_sync_agent_mcp_still_preserves_manual_entries(tmp_path, monkeypatch):
         "mine": {"transport": "http", "url": "https://mine"},
     }}), encoding="utf-8")
 
-    hermes_config_sync.sync_agent_mcp({"sorftime_key": "k1"})
+    hermes_config_sync.on_settings_saved({"sorftime_key": "k1"})
     servers = json.loads(path.read_text("utf-8"))["mcpServers"]
     assert "mine" in servers and servers["mine"]["url"] == "https://mine"
-    assert servers["sorftime"]["trusted"] is True
+    assert "sorftime" not in servers

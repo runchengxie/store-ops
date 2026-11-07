@@ -102,7 +102,7 @@ job 退出码 0 表示报告/回执阶段完成，1 表示已记录的阶段失�
 | `ivyea_report_read` | `read` | 读取本地报告 |
 | `ivyea_report_save` | `write` | 保存绑定来源的本地报告 |
 
-`/api/mcp` 使用 bearer token，网页会话不能替代 token。这些工具不修改平台，原 Amazon keyword tool 仍仅适用 Amazon。
+`/api/mcp` 使用 bearer token，网页会话不能替代 token。这些工具不修改平台，Amazon keyword tool 已下线，仅提供已启用 adapter 的能力。
 
 ## 计划准备
 

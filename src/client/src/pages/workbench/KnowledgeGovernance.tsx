@@ -60,19 +60,19 @@ const EVIDENCE_KINDS = [
   ["fee_record", "费用记录"],
   ["tax_report", "税务报告"],
   ["settlement_report", "结算对账"],
-  ["returns_report", "退货/SAFE-T 索赔"],
+  ["returns_report", "退货/索赔"],
   ["brand_notice", "品牌保护通知"],
-  ["support_case", "Seller Support 回复"],
-  ["api_notification", "SP-API 通知"],
+  ["support_case", "平台支持回复"],
+  ["api_notification", "API 通知"],
 ] as const;
 
-const MARKETPLACES = ["US", "CA", "UK", "DE", "FR", "IT", "ES", "JP", "AU", "SG", "IN", "AE", "GLOBAL"];
+const MARKETPLACES = ["RO", "GLOBAL"];
 
 const EMPTY_EVIDENCE: KnowledgeEvidencePayload = {
   authorized: false,
   rights_confirmed: false,
   kind: "performance_notification",
-  marketplace: "US",
+  marketplace: "RO",
   title: "",
   source_url: "",
   content: "",
@@ -654,8 +654,8 @@ export default function KnowledgeGovernancePanel() {
               <label>Marketplace<select data-testid="evidence-marketplace" value={evidenceForm.marketplace} onChange={(event) => setEvidenceField("marketplace", event.target.value)}>
                 {MARKETPLACES.map((value) => <option key={value} value={value}>{value}</option>)}
               </select></label>
-              <label className="kg-wide">标题<input data-testid="evidence-title" value={evidenceForm.title || ""} onChange={(event) => setEvidenceField("title", event.target.value)} placeholder="例如：US 站账户健康通知 2026-07" /></label>
-              <label className="kg-wide">官方来源 URL<input data-testid="evidence-source-url" value={evidenceForm.source_url || ""} onChange={(event) => setEvidenceField("source_url", event.target.value)} placeholder="https://sellercentral.amazon.com/...；留空则生成本地 export 引用" /></label>
+              <label className="kg-wide">标题<input data-testid="evidence-title" value={evidenceForm.title || ""} onChange={(event) => setEvidenceField("title", event.target.value)} placeholder="例如：RO 站账户健康通知 2026-07" /></label>
+              <label className="kg-wide">官方来源 URL<input data-testid="evidence-source-url" value={evidenceForm.source_url || ""} onChange={(event) => setEvidenceField("source_url", event.target.value)} placeholder="https://marketplace.emag.ro/...；留空则生成本地 export 引用" /></label>
               <label className="kg-wide">原文错误/通知信息<textarea data-testid="evidence-message" value={evidenceForm.exact_message || ""} onChange={(event) => setEvidenceField("exact_message", event.target.value)} placeholder="粘贴需要诊断的准确通知或错误文本" /></label>
               <label className="kg-wide">必要上下文<textarea data-testid="evidence-content" className="kg-editor" value={evidenceForm.content || ""} onChange={(event) => setEvidenceField("content", event.target.value)} placeholder="只粘贴诊断所需的政策、交易、报表或处理上下文" /></label>
             </div>
@@ -663,8 +663,8 @@ export default function KnowledgeGovernancePanel() {
               <div className="kg-draft-fields kg-evidence-fields">
                 {([[
                   "account_id", "账户标识"], ["case_id", "Case ID"], ["notification_id", "Notification ID"],
-                  ["order_id", "Order ID"], ["claim_id", "Claim / SAFE-T ID"], ["settlement_id", "Settlement ID"],
-                  ["transaction_id", "Transaction ID"], ["asin", "ASIN"], ["sku", "SKU"],
+                  ["order_id", "Order ID"], ["claim_id", "Claim ID"], ["settlement_id", "Settlement ID"],
+                  ["transaction_id", "Transaction ID"], ["sku", "SKU"],
                   ["product_type", "Product type"], ["error_code", "错误码"], ["policy", "政策/状态"],
                   ["program", "品牌项目"], ["report_type", "报告类型"], ["currency", "币种"],
                   ["registration_stage", "注册阶段"], ["document_request", "要求的资料"],

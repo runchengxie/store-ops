@@ -1,8 +1,8 @@
 /* Skill Tools API client */
 import { api } from "./client";
-import type { SseEvent } from "./deepAnalysis";
-export type { SseEvent } from "./deepAnalysis";
-import { consumeSSE } from "./deepAnalysis";
+import type { SseEvent } from "./sse";
+export type { SseEvent } from "./sse";
+import { consumeSSE } from "./sse";
 
 export interface SkillToolMeta {
   name: string;

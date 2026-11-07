@@ -324,6 +324,12 @@ def run_task_now(task: dict[str, Any], trigger: str = "manual") -> dict[str, Any
         "permissions": [],
     })
     try:
+        from app.services.retired_capabilities import retired_reference
+        retired = retired_reference(skill=str(task.get("skill") or ""), prompt=str(task.get("prompt") or ""))
+        if retired:
+            _finish_run(run_id, task["id"], status="error",
+                        error=f"capability_retired: Capability has been retired (能力已下线): {retired}")
+            return list_runs(task["id"], limit=1)[0]
         payload: dict[str, Any] = {
             "message": task["prompt"],
             # 无人值守：只读 + 不开远程审批。这两个是这条路的安全底线，不做成配置。

@@ -90,9 +90,6 @@ export const BOARDS: BoardEntry[] = [
   {
     to: "/dashboard", icon: "home", label: "运营驾驶舱", group: "tools", legacySection: "工具",
     pathLabel: "~/运营驾驶舱", ready: true,
-    // 原「领星 ERP」板块的场景芯片。板块并进来了，芯片就得跟过来 ——
-    // sceneChips() 是从这张表派生的，跟着板块一起删掉的话，任务台首页会
-    // 静默少一个入口，而且没有任何地方会报错。
     scene: {
       icon: "ad-waste", label: "店铺证据巡检",
       prompt: "读取最近的 eMAG RO 快照，注明采集时间与限制，优先列出有库存且价格无效的商品。成本待补，不自动改价。",
@@ -134,10 +131,6 @@ export const BOARDS: BoardEntry[] = [
       prompt: "检查 eMAG 快照的未知库存、缺失字段、库存库龄差异及最近巡检回执；缺失不等于零，离线重放不等于新采集。",
     },
   },
-  // 「领星 ERP」板块已并入运营驾驶舱（2026-08-29）—— 它和驾驶舱本来就是同一件事的
-  // 两半：驾驶舱负责"看"，领星负责"数据从哪来 + 怎么落地"。最刺眼的是工单：在广告
-  // 看板点「调预算」生成的工单，此前得切到另一个板块才能确认，两边连跳转都没有。
-  // /lingxing 保留为重定向（见 App.tsx），带 ?tab= 的老书签会落到对应位置。
   // Skill 中心并入能力市场的「技能」标签（2026-08-17）—— 同一批技能此前被列了三遍，
   // 还分在两个板块里。/skill-hub 重定向过去，老书签不会 404。
 
@@ -202,11 +195,9 @@ export function boardPath(b: BoardEntry): string {
  */
 const EXTRA_PATH_LABELS: Record<string, string> = {
   // 重定向那一瞬间也别显示成 "~/"（看着像走丢了）。
-  "/lingxing": "~/运营驾驶舱",
   "/idea-skill": "~/想法工坊",
   "/skill-tools": "~/运营商店",
   "/skill": "~/SkillStudio",
-  "/deep-analysis": "~/深入分析",
 };
 
 const PATH_LABELS: Record<string, string> = (() => {

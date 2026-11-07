@@ -41,7 +41,7 @@ class PageBody(BaseModel):
 
 class ChatSessionCreateBody(BaseModel):
     title: str | None = Field(default=None, max_length=80)
-    mode: str = Field(default="knowledge", pattern="^(knowledge|general|amazon_operator)$")
+    mode: str = Field(default="knowledge", pattern="^(knowledge|general)$")
 
 
 class ChatSessionUpdateBody(BaseModel):
@@ -276,11 +276,11 @@ def _ia_upload_bytes(
 
 _ANALYSIS_FIELDS_SPEC = (
     "- title: 中文短标题，最多 40 字\n"
-    "- directory: inbox / amazon/ads / amazon/products / amazon/messages / "
-    "amazon/suppliers / amazon/market / compliance 之一\n"
+    "- directory: inbox / operations/ads / operations/products / operations/messages / "
+    "operations/suppliers / operations/market / compliance 之一\n"
     "- tags: 3-6 个短标签组成的数组\n"
     "- summary: 80-160 字中文摘要\n"
-    "- content_type: note / amazon_ads / amazon_product / buyer_message / "
+    "- content_type: note / ads_note / product_note / buyer_message / "
     "supplier_note / market_note / compliance\n"
     "- confidence: 0 到 1 的数字"
 )
@@ -827,7 +827,7 @@ async def chat_message_stream(session_id: str, body: ChatStreamBody,
 
     async def gen():
         # Front door: route the knowledge chat through the governed IvyeaAgent
-        # brain (its built-in Amazon knowledge base) when the local service is
+        # brain (its built-in configured knowledge base) when the local service is
         # up; skip the legacy GBrain citation retrieval in that case. Hermes /
         # the global text chain remain only as fallbacks when IvyeaAgent is down.
         use_ivyea = bc.ivyea_chat_available()

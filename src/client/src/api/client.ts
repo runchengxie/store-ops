@@ -116,468 +116,6 @@ export async function adminSetUserPermissions(uid: number, position: string, per
   return data as { ok: boolean; position: string; permissions: string[] };
 }
 
-export async function asinInspect(asin: string) {
-  const { data } = await api.post("/amazon/asin/inspect", { asin });
-  return data as {
-    asin: string;
-    valid: boolean;
-    marketplace_hint: string;
-    note: string;
-  };
-}
-
-export async function listingDemo() {
-  const { data } = await api.get("/amazon/listing/demo");
-  return data as { title_score: number; bullet_count: number; suggestions: string[] };
-}
-
-// --- ASIN deep audit ---
-
-export type AuditJobMeta = {
-  job_id: string;
-  asin: string;
-  marketplace: string;
-  mode: string;
-  status: "queued" | "running" | "done" | "failed" | "cancelled";
-  progress?: string | null;
-  created_at: string;
-  started_at?: string | null;
-  finished_at?: string | null;
-  error?: string | null;
-  runner_pref?: string | null;
-  runner_used?: string | null;
-};
-
-export type AuditScorecardItem = { dimension: string; score: number; note: string };
-export type AuditPriority = { level: string; issue: string; evidence: string; action: string };
-export type AuditCampaign = {
-  name: string;
-  type: string;
-  targeting: string;
-  bid_range: string;
-  budget: string;
-  strategy: string;
-};
-export type AuditKeyword = { keyword: string; bid: string; reason: string };
-export type AuditProductTarget = {
-  target?: string;
-  keyword?: string;
-  bid?: string;
-  reason?: string;
-  [k: string]: any;
-};
-
-export type EvidenceBullet = { label: string; text: string };
-export type EvidenceGroup = { aspect?: string; category?: string; topic?: string; bullets: EvidenceBullet[] };
-export type CosmoNode = { node: string; label_cn: string; bullets: EvidenceBullet[] };
-export type RufusQA = { question: string; verdict: string; evidence: string };
-
-export type AuditStructured = {
-  overview?: {
-    asin?: string;
-    marketplace?: string;
-    category?: string;
-    title_summary?: string;
-    key_specs?: string;
-    top_risk?: string;
-    price?: string;
-  };
-  scorecard?: AuditScorecardItem[];
-  semantic_blind_spots?: EvidenceGroup[];
-  cosmo_nodes?: CosmoNode[];
-  rufus_qa?: RufusQA[];
-  behavior_signals?: EvidenceGroup[];
-  competitor_diff?: EvidenceGroup[];
-  priorities?: AuditPriority[];
-  ad_plan?: {
-    objective?: string;
-    campaigns?: AuditCampaign[];
-    keywords_exact?: AuditKeyword[];
-    keywords_phrase_broad?: AuditKeyword[];
-    product_targeting?: AuditProductTarget[];
-    negatives_immediate?: string[];
-    negatives_watch?: string[];
-    rules?: string;
-  };
-  rewrites?: {
-    title?: string;
-    bullets?: string[];
-    qa?: { q: string; a: string }[];
-    backend_terms?: string;
-    image_plan?: {
-      main_image?: string[];
-      aux_images?: string[];
-      scene_images?: string[];
-    };
-    aplus_plan?: string[];
-    compliance_reminders?: string[];
-  };
-};
-
-export type AuditFull = AuditJobMeta & {
-  raw_md?: string | null;
-  structured?: AuditStructured | null;
-};
-
-export type RunnerName = "auto" | "ivyea-agent" | "hermes" | "codex" | "claude";
-
-export type RunnerStatus = {
-  name: RunnerName;
-  label: string;
-  available: boolean;
-  path?: string | null;
-  reason?: string | null;
-  auto_resolved_to?: string | null;
-  data_source_ready?: boolean;
-  data_source_hint?: string | null;
-};
-
-export async function auditRunners() {
-  const { data } = await api.get<{ runners: RunnerStatus[] }>(
-    "/amazon/audit/runners",
-  );
-  return data.runners;
-}
-
-export async function auditStart(
-  asin: string,
-  marketplace = "US",
-  mode = "full",
-  runner: RunnerName = "auto",
-) {
-  const { data } = await api.post<{
-    job_id: string;
-    status: string;
-    created_at: string;
-    runner_used?: string | null;
-  }>("/amazon/audit/start", { asin, marketplace, mode, runner });
-  return data;
-}
-
-export async function auditGet(jobId: string) {
-  const { data } = await api.get<AuditFull>(`/amazon/audit/${jobId}`);
-  return data;
-}
-
-export async function auditList(limit = 20) {
-  const { data } = await api.get<{ items: AuditJobMeta[]; busy: boolean }>(
-    "/amazon/audit/list",
-    { params: { limit } },
-  );
-  return data;
-}
-
-export function auditDownloadUrl(jobId: string, fmt: "md" | "json" | "xlsx" | "html") {
-  return `/api/amazon/audit/${jobId}/download?fmt=${fmt}`;
-}
-
-export async function auditClearFailed() {
-  const { data } = await api.post<{ removed: number }>("/amazon/audit/clear-failed");
-  return data;
-}
-
-export async function auditDelete(jobId: string) {
-  const { data } = await api.delete<{ deleted: boolean }>(`/amazon/audit/${jobId}`);
-  return data;
-}
-
-// --- Ad search-term report audit ---
-
-export type AdAuditGoal = "profit" | "new_launch" | "relaunch" | "clearance";
-export type AdAuditOutputMode = "report" | "xlsx_plan";
-export type AdType = "SP" | "SB" | "SD" | "";
-
-export type AdSourceInfo = {
-  source_id: string;
-  file_name: string;
-  file_ext: string;
-  file_size: number;
-  ad_type: AdType;
-  date_range: string;
-  row_count: number;
-  columns?: string[];
-  campaign_name: string;
-  daily_budget_usd?: number | null;
-  uploaded_at?: string;
-};
-
-export type AdAuditJobMeta = {
-  job_id: string;
-  file_name: string;
-  ad_type: AdType;
-  marketplace: string;
-  date_range: string;
-  row_count: number;
-  goal: AdAuditGoal | "";
-  output_mode?: AdAuditOutputMode;
-  asin: string;
-  protected_keywords: string[];
-  product_notes: string;
-  sources?: AdSourceInfo[];
-  daily_budgets?: Record<string, number>;
-  runner_pref?: string | null;
-  runner_used?: string | null;
-  status: "uploaded" | "queued" | "running" | "done" | "failed" | "cancelled";
-  progress?: string | null;
-  created_at: string;
-  started_at?: string | null;
-  finished_at?: string | null;
-  error?: string | null;
-};
-
-export type AdAuditUploadResp = AdAuditJobMeta & {
-  columns: string[];
-};
-
-export type AdAuditOverview = {
-  ad_type?: string;
-  marketplace?: string;
-  date_range?: string;
-  impressions?: number;
-  clicks?: number;
-  spend?: number;
-  orders?: number;
-  sales?: number;
-  acos?: string;
-  ctr?: string;
-  cvr?: string;
-  one_line_verdict?: string;
-};
-
-export type AdProtectedKwRow = {
-  keyword: string;
-  status: "good" | "warn" | "bad" | string;
-  impressions?: number;
-  clicks?: number;
-  spend?: number;
-  orders?: number;
-  acos?: string;
-  note?: string;
-};
-
-export type AdKeywordRow = {
-  keyword: string;
-  match_type?: string;
-  impressions?: number;
-  clicks?: number;
-  spend?: number;
-  orders?: number;
-  acos?: string;
-  action?: "boost" | "cut" | "pause" | "watch" | "new" | string;
-  suggested_bid?: string;
-  reason?: string;
-};
-
-export type AdNewKeywordRow = {
-  keyword: string;
-  source_search_term?: string;
-  impressions?: number;
-  orders?: number;
-  suggested_bid?: string;
-  reason?: string;
-};
-
-export type AdNegativeRow = {
-  term: string;
-  type: "immediate" | "watch" | string;
-  reason?: string;
-};
-
-export type AdPlacementRow = {
-  placement: string;
-  impressions?: number;
-  clicks?: number;
-  spend?: number;
-  orders?: number;
-  acos?: string;
-  ctr?: string;
-  cvr?: string;
-  action?: string;
-};
-
-export type AdActionRow = {
-  level: "P0" | "P1" | "P2" | string;
-  action: string;
-  evidence?: string;
-  expected_impact?: string;
-};
-
-export type AdCrossCampaignInsight = {
-  insight_type:
-    | "black_hole_campaign"
-    | "budget_reallocation"
-    | "keyword_migration"
-    | "match_type_gap"
-    | "placement_shift"
-    | string;
-  summary: string;
-  detail?: string;
-  from_campaign?: string;
-  to_campaign?: string;
-  evidence?: string;
-  suggested_action?: string;
-};
-
-export type AdAuditStructured = {
-  overview?: AdAuditOverview;
-  protected_keywords_status?: AdProtectedKwRow[];
-  high_performers?: AdKeywordRow[];
-  low_performers?: AdKeywordRow[];
-  new_keyword_candidates?: AdNewKeywordRow[];
-  negative_suggestions?: AdNegativeRow[];
-  placement_diagnosis?: AdPlacementRow[];
-  action_summary?: AdActionRow[];
-  cross_campaign_insights?: AdCrossCampaignInsight[];
-  data_notes?: string;
-  meta?: Record<string, any>;
-};
-
-/** 统一结论契约（后端 app/core/findings.py）。证据是结构化的，能核对。 */
-export type FindingEvidence = {
-  metric: string;
-  value: unknown;
-  unit?: string;
-  target?: string;
-  source?: string;
-  as_of?: string;
-  note?: string;
-};
-
-export type FindingAction = {
-  type: string;
-  target?: string;
-  detail?: string;
-  /** 执行前提/阈值，如「点击≥15 且 0 单」。没有它就无法判断该不该照做。 */
-  guardrail?: string;
-  reversible?: boolean;
-  confidence?: number;
-};
-
-export type Finding = {
-  id?: string;
-  severity?: "critical" | "high" | "medium" | "low";
-  title: string;
-  reasoning?: string;
-  evidence?: FindingEvidence[];
-  actions?: FindingAction[];
-  priority_score?: number;
-};
-
-export type FindingList = {
-  findings: Finding[];
-  data_notes?: string;
-  /** 完全没给证据的结论 id —— 用户最该能一眼看出的就是"这条凭什么"。 */
-  unsupported?: string[];
-};
-
-export type AdAuditFull = AdAuditJobMeta & {
-  raw_md?: string | null;
-  structured?: AdAuditStructured | null;
-  /** 与 structured 并存：老字段原样保留，新消费方读这份。 */
-  findings?: FindingList | null;
-  preview_columns?: string[] | null;
-};
-
-export async function adAuditRunners() {
-  const { data } = await api.get<{ runners: RunnerStatus[] }>("/ad-audit/runners");
-  return data.runners;
-}
-
-export async function adAuditUpload(
-  file: File,
-  marketplace = "US",
-  jobId?: string,
-): Promise<AdAuditUploadResp> {
-  const form = new FormData();
-  form.append("file", file);
-  form.append("marketplace", marketplace);
-  if (jobId) form.append("job_id", jobId);
-  const { data } = await api.post<AdAuditUploadResp>("/ad-audit/upload", form, {
-    headers: { "Content-Type": "multipart/form-data" },
-    timeout: 60000,
-  });
-  return data;
-}
-
-export async function adAuditRemoveSource(
-  jobId: string,
-  sourceId: string,
-): Promise<AdAuditUploadResp> {
-  const { data } = await api.delete<AdAuditUploadResp>(
-    `/ad-audit/${jobId}/source/${sourceId}`,
-  );
-  return data;
-}
-
-export async function adAuditUpdateSource(
-  jobId: string,
-  sourceId: string,
-  payload: {
-    campaign_name?: string;
-    daily_budget_usd?: number;
-    clear_daily_budget?: boolean;
-  },
-): Promise<AdAuditUploadResp> {
-  const { data } = await api.patch<AdAuditUploadResp>(
-    `/ad-audit/${jobId}/source/${sourceId}`,
-    payload,
-  );
-  return data;
-}
-
-export async function adAuditStart(payload: {
-  job_id: string;
-  goal: AdAuditGoal;
-  output_mode?: AdAuditOutputMode;
-  asin?: string;
-  product_notes?: string;
-  protected_keywords?: string[];
-  runner?: RunnerName;
-  daily_budgets?: Record<string, number>;
-}) {
-  const { data } = await api.post<{
-    job_id: string;
-    status: string;
-    started_at?: string | null;
-    runner_used?: string | null;
-  }>("/ad-audit/start", payload);
-  return data;
-}
-
-export async function adAuditGet(jobId: string) {
-  const { data } = await api.get<AdAuditFull>(`/ad-audit/${jobId}`);
-  return data;
-}
-
-export async function adAuditList(limit = 20) {
-  const { data } = await api.get<{ items: AdAuditJobMeta[]; busy: boolean }>(
-    "/ad-audit/list",
-    { params: { limit } },
-  );
-  return data;
-}
-
-/** deliverable / brief 走统一结论契约，是"发给别人看"的版本（结论 + 证据页 +
- *  说明页）；xlsx/md/json/html 是原始报表。两者不是一个东西。 */
-export function adAuditDownloadUrl(
-  jobId: string,
-  fmt: "md" | "json" | "xlsx" | "html" | "deliverable" | "brief" | "pptx" | "pdf",
-) {
-  return `/api/ad-audit/${jobId}/download?fmt=${fmt}`;
-}
-
-export async function adAuditClearFailed() {
-  const { data } = await api.post<{ removed: number }>("/ad-audit/clear-failed");
-  return data;
-}
-
-export async function adAuditDelete(jobId: string) {
-  const { data } = await api.delete<{ deleted: boolean }>(`/ad-audit/${jobId}`);
-  return data;
-}
-
-// --- Monitor ---
-
 export type MonitorSnapshot = {
   cpu: {
     percent: number;
@@ -872,7 +410,7 @@ export type BrainChatStatus = {
 export type BrainChatSession = {
   id: string;
   title: string;
-  mode: "knowledge" | "general" | "amazon_operator" | string;
+  mode: "knowledge" | "general" | string;
   created_at: string;
   updated_at: string;
   archived: boolean;
@@ -908,7 +446,7 @@ export async function brainChatSessions() {
   return data;
 }
 
-export async function brainChatCreate(title?: string, mode: "knowledge" | "general" | "amazon_operator" = "knowledge") {
+export async function brainChatCreate(title?: string, mode: "knowledge" | "general" = "knowledge") {
   const { data } = await api.post<{ session: BrainChatSession; messages: BrainChatMessage[] }>("/brain/chat/sessions", { title, mode });
   return data;
 }
@@ -1131,3 +669,40 @@ export async function marketUninstall(slug: string) {
   const { data } = await api.post("/skill-market/uninstall", { slug });
   return data;
 }
+
+export type FindingEvidence = {
+  metric: string;
+  value: unknown;
+  unit?: string;
+  target?: string;
+  source?: string;
+  as_of?: string;
+  note?: string;
+};
+
+export type FindingAction = {
+  type: string;
+  target?: string;
+  detail?: string;
+  /** 执行前提/阈值，如「点击≥15 且 0 单」。没有它就无法判断该不该照做。 */
+  guardrail?: string;
+  reversible?: boolean;
+  confidence?: number;
+};
+
+export type Finding = {
+  id?: string;
+  severity?: "critical" | "high" | "medium" | "low";
+  title: string;
+  reasoning?: string;
+  evidence?: FindingEvidence[];
+  actions?: FindingAction[];
+  priority_score?: number;
+};
+
+export type FindingList = {
+  findings: Finding[];
+  data_notes?: string;
+  /** 完全没给证据的结论 id —— 用户最该能一眼看出的就是"这条凭什么"。 */
+  unsupported?: string[];
+};

@@ -6,13 +6,11 @@ import { ConfirmProvider } from "./components/ConfirmDialog";
 import AutoFixProvider from "./components/AutoFixProvider";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
-import Home from "./pages/workbench/Home";
 import Setup from "./pages/Setup";
 // Workbench boards are lazy-loaded (each becomes its own chunk fetched on first
 // navigation), so the initial bundle no longer ships every board up front. The
 // Suspense boundary lives in MainLayout (around <Outlet/> and the persistent /
 // keep-alive boards). Home / Login / NotFound / Setup stay eager (shell).
-const Tools = lazy(() => import("./pages/workbench/Tools"));
 const SkillStudio = lazy(() => import("./pages/skill/SkillStudio"));
 const StatsOverview = lazy(() => import("./pages/skill/StatsOverview"));
 const SkillBrowse = lazy(() => import("./pages/skill/SkillBrowse"));
@@ -21,20 +19,14 @@ const TrashList = lazy(() => import("./pages/skill/TrashList"));
 const SettingsPage = lazy(() => import("./pages/skill/SettingsPage"));
 const Terminal = lazy(() => import("./pages/workbench/Terminal"));
 const ServerMonitor = lazy(() => import("./pages/workbench/ServerMonitor"));
-const News = lazy(() => import("./pages/workbench/News"));
 const Brain = lazy(() => import("./pages/workbench/Brain"));
-const ListingWorkbench = lazy(() => import("./pages/workbench/listing/ListingWorkbench"));
 const Agents = lazy(() => import("./pages/workbench/Agents"));
-const Market = lazy(() => import("./pages/workbench/Market"));
-const Playbook = lazy(() => import("./pages/workbench/Playbook"));
 const HubSettings = lazy(() => import("./pages/workbench/HubSettings"));
 const FreightQuote = lazy(() => import("./pages/workbench/FreightQuote"));
 const Users = lazy(() => import("./pages/workbench/Users"));
 const ImageTranslate = lazy(() => import("./pages/workbench/ImageTranslate"));
 const IdeaSkill = lazy(() => import("./pages/workbench/IdeaSkill"));
 const SkillTools = lazy(() => import("./pages/workbench/SkillTools"));
-const DeepAnalysis = lazy(() => import("./pages/workbench/DeepAnalysis"));
-const LingXingRedirect = lazy(() => import("./pages/workbench/LingXingRedirect"));
 const Console = lazy(() => import("./pages/workbench/Console"));
 const Capabilities = lazy(() => import("./pages/workbench/Capabilities"));
 const Approvals = lazy(() => import("./pages/workbench/Approvals"));
@@ -199,12 +191,6 @@ export default function App() {
                    element={<Navigate to="/capabilities?tab=community" replace />} />
             <Route path="schedules" element={<Schedules />} />
             <Route path="dashboard" element={<EmagWorkspace mode="dashboard" />} />
-            <Route path="legacy/dashboard" element={<Home />} />
-            <Route path="legacy/market" element={<Market />} />
-            <Route path="legacy/playbook" element={<Playbook />} />
-            <Route path="legacy/tools" element={<Tools />} />
-            <Route path="legacy/listing" element={<ListingWorkbench />} />
-            <Route path="legacy/news" element={<News />} />
             <Route path="emag" element={<EmagOperations />} />
             <Route path="tools" element={<EmagWorkspace mode="tools" />} />
             <Route path="skill" element={<SkillStudio />}>
@@ -236,11 +222,6 @@ export default function App() {
                 Skill 中心的运行列表、Skill 中心的文件管理），还分在两个板块里。
                 老书签和老深链都不能 404 —— ?tab=create 要平移成 ?tab=skills&seg=create。 */}
             <Route path="skill-hub" element={<SkillHubRedirect />} />
-            <Route path="deep-analysis" element={<DeepAnalysis />} />
-            {/* 领星 ERP 已并入运营驾驶舱（市场侧 5 个 tab + 自家店铺 4 个 tab，
-                数据浏览/审计/配置进了齿轮对话框）。老书签带着 ?tab= 进来，要按
-                映射表落到对应的位置 —— 直接 Navigate 会把 query 丢掉。 */}
-            <Route path="lingxing" element={<LingXingRedirect />} />
             <Route path="hub-settings" element={<HubSettings />} />
             <Route path="*" element={<NotFound />} />
           </Route>

@@ -46,8 +46,8 @@ class Evidence(BaseModel):
     metric: str = Field(..., description="指标名，如 spend_30d / clicks / acos")
     value: Any = Field(..., description="指标值")
     unit: str = ""
-    target: str = Field("", description="这条证据说的是哪个对象：ASIN / 关键词 / 广告活动")
-    source: str = Field("", description="数据来自哪儿：ads_api / lingxing / sorftime / upload")
+    target: str = Field("", description="这条证据说的是哪个对象：商品 / 关键词 / 广告活动")
+    source: str = Field("", description="数据来自哪儿：platform_api / snapshot / upload")
     as_of: str = Field("", description="数据的时间点或时间窗")
     note: str = Field("", description="补充说明；老结构里的自由文本证据落在这里")
 

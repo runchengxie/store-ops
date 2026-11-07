@@ -25,7 +25,7 @@ logger = logging.getLogger("ivyea.services.brain_chat_service")
 DB_PATH = Path(os.environ.get("IVYEA_OPS_BRAIN_CHAT_DB", str(settings.data_dir / "brain_chat.sqlite3")))
 MAX_UPLOAD_BYTES = int(os.environ.get("BRAIN_UPLOAD_MAX_BYTES", str(10 * 1024 * 1024)))
 ALLOWED_UPLOAD_EXTS = {".md", ".txt", ".csv", ".json", ".xlsx", ".pdf"}
-ALLOWED_CATEGORIES = {"inbox", "amazon", "products", "market", "ads", "compliance", "suppliers"}
+ALLOWED_CATEGORIES = {"inbox", "products", "market", "ads", "compliance", "suppliers"}
 # CLI runner used when the in-process IvyeaAgent service isn't reachable.
 # 2026-08-06: hermes → ivyea-agent（hermes 不再是本机默认智能体）。
 _RUNNER = "ivyea-agent"
@@ -122,7 +122,7 @@ def create_session(title: str | None = None, mode: str = "knowledge") -> dict[st
     sid = uuid.uuid4().hex
     ts = _now()
     clean_title = (title or "新知识对话").strip()[:80] or "新知识对话"
-    clean_mode = mode if mode in {"knowledge", "general", "amazon_operator"} else "knowledge"
+    clean_mode = mode if mode in {"knowledge", "general"} else "knowledge"
     with _connect() as conn:
         conn.execute(
             "INSERT INTO brain_chat_sessions(id, title, mode, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
@@ -248,30 +248,9 @@ def _first_heading_or_line(text: str) -> str:
 
 
 def _fallback_ingest_analysis(text: str) -> dict[str, Any]:
-    lower = text.lower()
     directory = "inbox"
     tags = ["paste"]
     content_type = "note"
-    if any(x in lower for x in ["acos", "campaign", "广告", "关键词", "否词", "ctr", "cvr"]):
-        directory = "amazon/ads"
-        tags.append("ads")
-        content_type = "amazon_ads"
-    elif any(x in lower for x in ["asin", "listing", "a+", "产品", "sku", "变体"]):
-        directory = "amazon/products"
-        tags.append("product")
-        content_type = "amazon_product"
-    elif any(x in lower for x in ["售后", "customer", "buyer", "refund", "review", "评价", "延保", "站内信"]):
-        directory = "amazon/messages"
-        tags.extend(["message", "compliance"])
-        content_type = "buyer_message"
-    elif any(x in lower for x in ["供应商", "1688", "报价", "采购", "工厂"]):
-        directory = "amazon/suppliers"
-        tags.append("supplier")
-        content_type = "supplier_note"
-    elif any(x in lower for x in ["市场", "竞品", "竞争", "类目", "搜索量"]):
-        directory = "amazon/market"
-        tags.append("market")
-        content_type = "market_note"
     title = _first_heading_or_line(text)
     summary_source = re.sub(r"\s+", " ", text).strip()
     return {
@@ -342,10 +321,10 @@ def analyze_pasted_text(text: str) -> dict[str, Any]:
 
         请分析用户粘贴的文本，自动生成：
         - title: 适合做 Markdown 标题的中文短标题，最多 40 字
-        - directory: 应保存到 /root/brain 下的相对目录。可新建目录，但必须安全、简短，例如 inbox、amazon/ads、amazon/products、amazon/messages、amazon/suppliers、amazon/market、compliance
+        - directory: 应保存到 /root/brain 下的相对目录。可新建目录，但必须安全、简短，例如 inbox、operations/ads、operations/products、operations/messages、operations/suppliers、operations/market、compliance
         - tags: 3-6 个短标签，只用中文、英文、数字或短横线
         - summary: 80-160 字中文摘要
-        - content_type: note / amazon_ads / amazon_product / buyer_message / supplier_note / market_note / compliance
+        - content_type: note / ads_note / product_note / buyer_message / supplier_note / market_note / compliance
         - confidence: 0 到 1
 
         只返回 JSON 对象，不要使用 Markdown 代码块。
@@ -706,8 +685,8 @@ def _legacy_category(item: dict[str, Any]) -> str:
     """从 GBrain 导入的卡片还原它原来的分类。
 
     这些卡在 agent 里统一是 `category: legacy_gbrain`，原分类藏在
-    `source_url`（`gbrain://amazon/ads/...`）和 `path`
-    （`user/imported/gbrain/amazon/ads/...`）里。不还原的话，按分类过滤引用
+    `source_url`（`gbrain://operations/ads/...`）和 `path`
+    （`user/imported/gbrain/operations/ads/...`）里。不还原的话，按分类过滤引用
     会把所有历史卡片全滤掉 —— 而那恰恰是 /brain 里内容最多的一批。
     """
     src = str(item.get("source_url") or "")
@@ -769,7 +748,7 @@ def ia_search(query: str, mode: str = "search", limit: int = 12) -> dict[str, An
 
 
 def chat_model_status() -> dict[str, Any]:
-    # Front door: the governed IvyeaAgent brain (built-in Amazon knowledge base).
+    # Front door: the governed IvyeaAgent brain (built-in configured knowledge base).
     if ivyea_chat_available():
         try:
             from app.services import ivyea_agent_service as _ia
@@ -880,7 +859,7 @@ def _last_user_text(messages: list[dict[str, str]]) -> str:
 
 def _call_llm(messages: list[dict[str, str]]) -> str:
     # Front door: the governed IvyeaAgent brain grounds the answer in its own
-    # built-in Amazon knowledge base. Degrade to the ivyea CLI / the unified
+    # built-in configured knowledge base. Degrade to the ivyea CLI / the unified
     # global text chain when the local IvyeaAgent service is unavailable or empty.
     if ivyea_chat_available():
         try:
@@ -911,17 +890,13 @@ def _build_prompt(user_message: str, citations: list[dict[str, Any]], mode: str)
         for i, c in enumerate(citations)
     ) or "未检索到相关知识。"
     persona = "你是用户的私有知识库助手。"
-    if mode == "amazon_operator":
-        persona += "你同时以资深 Amazon 运营视角回答，重视合规、CTR/CVR、Listing/A+、长尾词策略；不得建议 Vine 或 SBV 视频广告。"
-    else:
-        persona += "回答应简洁、可执行，并优先依据知识库。"
+    persona += "回答应简洁、可执行，并优先依据知识库。"
     system = f"""{persona}
 
 规则：
 1. 先依据【知识库片段】回答；知识库没有明确依据时，直接说明“知识库中没有找到明确依据”。
 2. 不编造来源；如引用知识，请在句末用“来源：xxx”这种自然方式说明。
-3. 涉及 Amazon 售后/评价/站外引流时，主动规避平台合规风险。
-4. 用中文回答，结构清晰，避免空泛。
+3. 用中文回答，结构清晰，避免空泛。
 
 【知识库片段】
 {context}
@@ -1004,7 +979,7 @@ def begin_chat_turn(session_id: str, content: str, regenerate: bool = False, cat
 
     When ``retrieve`` is False the legacy GBrain citation search and the hermes
     prompt are skipped: the raw question is handed to the IvyeaAgent brain, which
-    grounds the answer in its own governed Amazon knowledge base."""
+    grounds the answer in its own governed configured knowledge base."""
     init_db()
     current = get_session(session_id)["session"]
     user_msg: dict[str, Any] | None = None

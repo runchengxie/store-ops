@@ -219,7 +219,7 @@ def test_ingest_text_rules_fallback_when_hermes_unavailable(client, monkeypatch)
     )
     assert r.status_code == 200, r.text
     data = r.json()
-    assert data["category"] == "amazon/suppliers"
+    assert data["category"] == "inbox"
     assert data["analysis"]["source"] == "rules_fallback"
     assert any("Hermes 自动分析失败" in w for w in data["warnings"])
     assert (brain / data["saved_path"]).exists()
@@ -233,7 +233,7 @@ def test_chat_sessions_persist_messages(client, monkeypatch):
         "items": [{"slug": "amazon/note", "score": 1, "snippet": "广告优化"}]})
     monkeypatch.setattr(bc, "_call_llm", lambda messages: "基于知识库的回答")
 
-    r = c.post("/api/brain/chat/sessions", json={"title": "测试会话", "mode": "amazon_operator"}, headers=_HDR)
+    r = c.post("/api/brain/chat/sessions", json={"title": "测试会话", "mode": "knowledge"}, headers=_HDR)
     assert r.status_code == 200, r.text
     sid = r.json()["session"]["id"]
 

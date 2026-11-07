@@ -26,9 +26,6 @@ _DEFAULTS: Dict[str, Any] = {
     # Tried in order; first provider with a configured key wins.
     # Valid values: apimart (Claude Vision), openai (GPT-4o), assistant (custom provider)
     "vision_ai_providers": "openai,assistant",
-    # 资讯板块 RSS 源（留空用内置默认源）。每行一个：url | 来源名 | 分类
-    # 分类 ∈ {ai_industry, amazon_seller}，省略默认 ai_industry。
-    "news_feeds": "",
     # Hermes LLM — primary model (written to ~/.hermes/.env + config.yaml)
     # provider: deepseek | anthropic | openai | openrouter | google | groq | together | custom
     # Saving any of these auto-syncs into Hermes config; no gateway restart needed.
@@ -70,12 +67,7 @@ _DEFAULTS: Dict[str, Any] = {
     # 语义检索的 embedding 配置曾经在这里（gbrain_embed_*），已随 GBrain 一起移除：
     # 知识库前门是 IvyeaAgent，它的检索后端由 agent 自己管（ivyea retrieval embeddings），
     # 这三个键写的是 ~/.gbrain/config.json，配了对 agent 一点作用都没有——纯误导。
-    # Market data
-    "sorftime_key": "",      # sorftime.com — 市场调研、关键词趋势
-    "sif_key": "",           # sif.com — 深度分析工具箱（独立账号和 key）
-    "sellersprite_key": "",  # sellersprite.com — 竞品关键词分析
-    # 用户自建的 MCP 数据源（JSON 数组，见 services/custom_source_registry）。
-    # 内置三家与这里互不影响；默认空数组 = 老装机升级后一切照旧。
+    # User-defined MCP sources are configured explicitly.
     "custom_data_sources": "",
     # 知识库文件根目录（笔记/上传落盘位置，与 GBrain 无关，前门是 IvyeaAgent）
     "brain_root": "",           # empty = use env / default /root/brain
@@ -128,123 +120,6 @@ _DEFAULTS: Dict[str, Any] = {
     # repair flow (hermes in an isolated worktree, review-first). Off by default
     # — when off the frontend interceptor and backend engine never fire.
     "autofix_enabled": False,
-    # --- 领星 (LingXing) ERP -----------------------------------------------
-    # All LingXing traffic funnels through the IvyeaOps gateway; agents never
-    # see these credentials. Two backends: OpenAPI (data + ad-write) and the
-    # optional MCP (AI-native tools for the analysis agent).
-    # OpenAPI backbone (data reads + ad-write operations). Credentials from
-    # 领星 ERP 开放接口. Token is fetched/refreshed by the gateway and cached
-    # in data_dir/lingxing_token.json (never exposed to agents).
-    "lingxing_openapi_host": "https://openapi.lingxing.com",
-    "lingxing_openapi_appid": "",
-    "lingxing_openapi_secret": "",
-    "lingxing_openapi_min_interval_ms": 340,  # conservative pacing (~3/s) to avoid bans
-    # MCP backbone (optional — AI-native tools for the analysis agent once an
-    # X-Mcp-Key is generated in 领星后台).
-    "lingxing_mcp_key": "",
-    # 必须 https：http 会 302 到 https，而 httpx 默认不跟随重定向（见 lingxing_service._url）
-    "lingxing_mcp_url": "https://openmcp.lingxing.com/mcp-servers/lingxing-mcp",
-    # Master enable for the whole integration (panels + automation). Off = the
-    # gateway refuses every call. Default off.
-    "lingxing_enabled": False,
-    # WRITE switch ("操作领星"). Off = gateway is strictly read-only and never
-    # advertises/permits write tools. Default off. Turning it on starts a
-    # countdown after which it auto-reverts to read-only (defence against
-    # leaving it on). 0 disables auto-expiry.
-    "lingxing_operate_enabled": False,
-    "lingxing_operate_expires_at": "",   # ISO ts; gateway treats write as off past this
-    "lingxing_operate_ttl_minutes": 120,  # how long the write switch stays on per activation
-    # Every write requires a human final confirmation in the UI (locked on by
-    # decision — no threshold-based auto-execute tier).
-    "lingxing_operate_require_human": True,
-    # Circuit breaker: set (with a reason) when an execution fails; operate is
-    # forced off and stays off until an operator re-enables (which clears this).
-    "lingxing_circuit_reason": "",
-    # Heterogeneous triple review: provider per persona (data-rigour / devil's-
-    # advocate / business-balance). Missing provider falls back to the default
-    # embedded text chain.
-    "lingxing_review_providers": "ivyea-agent,deepseek,assistant",
-    # Model for the weekly advisory analysis (自动化建议). Same provider space as
-    # review (ivyea-agent/deepseek/assistant/hermes/claude/codex/custom:<id>);
-    # empty/unavailable falls back to the default embedded text chain.
-    "lingxing_analysis_provider": "ivyea-agent",
-    # Custom review/analysis model slots: JSON list of
-    # {"id","label","base_url","api_key","model"} (OpenAI-compatible). Reference
-    # in lingxing_review_providers as "custom:<id>". CLI agents
-    # (hermes/claude/codex) are also valid providers.
-    "lingxing_custom_models": "[]",
-    # Editable optimization methodology. Shown in the UI and injected into the
-    # LLM review (and analysis) as the rubric the model must apply.
-    "lingxing_rules_doc": (
-        "# 亚马逊广告(SP)优化方法论\n"
-        "## 数据充分性（底线：数据不足一律不动手）\n"
-        "- 否词：搜索词 ≥15 点击且 0 单（或花费 ≥2×目标CPA 且 0 单）\n"
-        "- 改 bid：≥15 点击才足以相信 ACOS\n"
-        "- 放量(加bid)：≥3 单且 ACOS ≤ 0.8×目标\n"
-        "- 收割：搜索词 ≥3 单\n"
-        "- 窗口：bid/预算 14–30 天，否词/收割 30–90 天；剔除最近 1–2 天（归因延迟）\n"
-        "## 目标\n"
-        "- 盈亏平衡 ACOS = 毛利率；目标 ACOS = 系数×毛利率（默认 0.7）\n"
-        "- 不同活动目标可不同（打榜可高于平衡换排名；利润收割低于平衡）\n"
-        "## 各杠杆规则\n"
-        "- 降bid(高ACOS)：新bid = RPC×目标ACOS，单步 ≤15%，不破下限\n"
-        "- 加bid(放量)：ACOS≤0.8×目标且有单 → +≤15%，新bid ≤ RPC×目标\n"
-        "- 高花费0单词：花费≥目标CPA → 重降或暂停；若是搜索词则否定\n"
-        "- 预算：打满且ACOS≤目标 → +X%；超标且没打满 → 先修bid/否词，别加预算\n"
-        "- 否词：达阈值 → negative exact；多周期一致才升 phrase\n"
-        "- 收割：auto/broad ≥3单搜索词 → 加精准活动(bid≈RPC×目标) + 原活动否定它（毕业）\n"
-        "## 顺序与护栏\n"
-        "- 顺序：否词 → 收割 → 调bid → 预算；同一对象冷却 7 天内不重复动\n"
-        "- 护栏：保护赢家(达标不准降/停)、放量bid不破平衡点、bid上下限、写白名单、单步幅度封顶\n"
-    ),
-    # Deterministic guardrails (hard caps, enforced in code regardless of AI
-    # reviews). Empty scope lists = nothing is writable until you whitelist.
-    "lingxing_scope_stores": "",          # comma-separated store ids/names allowed for writes
-    "lingxing_scope_asins": "",           # comma-separated ASINs allowed for writes ("*" = any in-store)
-    "lingxing_max_ops_per_run": 10,       # max write ops a single automation run may propose
-    "lingxing_max_change_pct": 20,        # max +/- % change a single op may make (bid/budget)
-    # Weekly advisory automation (P2 — analyse + recommend, never writes).
-    "lingxing_auto_enabled": False,       # master enable for the scheduled run (default off)
-    "lingxing_auto_weekday": 0,           # 0=Mon … 6=Sun
-    "lingxing_auto_hour": 9,              # local hour to fire
-    "lingxing_auto_report_days": 7,       # how many days of ad reports to aggregate
-    "lingxing_auto_stores": "",           # sids scope (csv); empty = all accessible stores
-    "lingxing_auto_max_campaigns": 40,    # cap campaigns sent to the model per run
-    # --- 广告优化规则引擎 (deterministic optimizer) ------------------------
-    # Target ACOS is derived from product margin (break-even ACOS = margin):
-    #   target_acos = target_acos_factor * margin. Manual overrides win if set.
-    "lingxing_target_acos_factor": 0.7,
-    "lingxing_margin_override": 0,        # >0 = use this margin (fraction, e.g. 0.35) instead of profit data
-    "lingxing_target_acos_override": 0,   # >0 = use this target ACOS directly
-    "lingxing_opt_window_days": 30,       # aggregation window for the optimizer
-    "lingxing_opt_exclude_recent_days": 2,  # drop the most recent N days (attribution lag)
-    # conservative significance + step thresholds (user-set: 保守)
-    "lingxing_neg_min_clicks": 15,        # negate a search term: >= clicks AND 0 orders
-    "lingxing_bid_min_clicks": 15,        # min clicks before trusting ACOS for a bid-down
-    "lingxing_scale_min_orders": 3,       # min orders before scaling a winner (bid up)
-    "lingxing_harvest_min_orders": 3,     # min orders before harvesting a search term
-    "lingxing_bid_step_pct": 15,          # max bid step per change (%)
-    "lingxing_cooldown_days": 7,          # don't re-touch the same entity within N days
-    "lingxing_bid_floor": 0.02,           # min bid
-    "lingxing_bid_ceiling": 0,            # max bid (0 = no cap beyond break-even logic)
-    # --- 驾驶舱直调「快车道」 ------------------------------------------------
-    # 小幅止血动作（降预算 / 降 bid / 暂停）跳过三重 LLM 复核，直接进"等人确认"。
-    # 三条硬约束写在 lingxing_operate.fast_lane_decision 里，不可绕过：
-    #   ① 只放行**变小**的方向和 paused，放量一律走全复核；
-    #   ② 幅度必须 ≤ fast_lane_max_pct；
-    #   ③ **只在「逐项确认」档生效** —— 自主执行档下复核是最后一道闸，不能省。
-    # 默认关：老用户升级后行为与升级前一模一样，要不要放开由他自己决定。
-    "lingxing_fast_lane_enabled": False,
-    "lingxing_fast_lane_max_pct": 15,     # 快车道允许的最大改动幅度(%)
-    # --- 驾驶舱后台预热 ------------------------------------------------------
-    # 广告看板冷启动实测 9 个店 × 1 天要 24.7 秒（限流 340ms/次），页面直连没法看。
-    # 后台按周期把数据灌进缓存，页面永远读缓存。
-    "cockpit_sync_enabled": False,        # 默认关，用户开了才后台拉数据
-    "cockpit_sync_minutes": 30,           # 预热间隔（分钟）
-    "cockpit_sync_days": 7,               # 预热多少天的广告报表
-    # 注意：促销临期 / 广告异常的**飞书提醒不在这里**，在 IvyeaAgent 的巡检规则里
-    # （它有节流去重、卡片版式、审批按钮和定时器）。这边再放一套阈值只会变成
-    # 两处配置打架、或者一个根本不生效的开关。阈值在「系统配置 → 飞书」那一屏。
     # --- External-integration paths ----------------------------------------
     # Optional: IvyeaOps works standalone without any of these, but the
     # monitor page and agent picker light up when you point at the right
@@ -265,9 +140,6 @@ _DEFAULTS: Dict[str, Any] = {
     "dsh_sessions_dir": "",      # /root/.dsh/sessions (DeepSeek Harness 会话)
     "hermes_node_bin": "",       # /root/.hermes/node/bin (PATH augment for spawns)
     "bun_bin": "",               # /root/.bun/bin (bun-based CLIs)
-    # ASIN/广告审计的默认执行智能体（选择器里 "auto" 解析到它）。默认 hermes——它是
-    # IvyeaOps 配好 skill + 数据源 MCP 的 runner，审计才能出结构化报告。空=hermes。
-    "audit_default_runner": "hermes",
 }
 
 _ENV_MAP: Dict[str, str] = {
@@ -281,7 +153,6 @@ _ENV_MAP: Dict[str, str] = {
     "ivyea_agent_api_key": "IVYEA_AGENT_API_KEY",
     "ivyea_agent_base_url": "IVYEA_AGENT_BASE_URL",
     "deepseek_api_key": "DEEPSEEK_API_KEY",
-    "sorftime_key": "SORFTIME_KEY",
     "openai_api_key": "OPENAI_API_KEY",
     "brain_root": "IVYEA_OPS_BRAIN_ROOT",
     "alert_webhook": "IVYEA_OPS_ALERT_WEBHOOK",
@@ -361,6 +232,7 @@ def get(key: str, default: Any = None) -> Any:
 
 def save(updates: Dict[str, Any]) -> Dict[str, Any]:
     """Merge updates and atomically persist; returns full settings."""
+    stored = _read_file()
     current = load()
     for k, v in updates.items():
         if k in _DEFAULTS:
@@ -370,7 +242,7 @@ def save(updates: Dict[str, Any]) -> Dict[str, Any]:
     # 落盘前把凭据字段加密。注意返回给调用方的仍然是**明文** current ——
     # 保存后前端要回显、runner 配置同步要用真值。
     from app.core import secrets as _secrets
-    on_disk = _secrets.encrypt_mapping(current)
+    on_disk = _secrets.encrypt_mapping({**stored, **current})
     tmp.write_text(json.dumps(on_disk, ensure_ascii=False, indent=2), "utf-8")
     tmp.replace(p)
     # 只记**改了哪些键**，不记值 —— 值里全是凭据，留痕的目的是"谁改了什么设置"，

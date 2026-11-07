@@ -6,11 +6,10 @@ import {
   getSettings, patchSettings, getHealth, changePassword,
   testSetting, autodetectSettings, selfCheckSettings, getAgentVersion,
   startAgentUpgrade, getAgentUpgradeProgress, slotModelCatalog,
-  getFeishuStatus, feishuAction, getAmazonStatus, saveAmazonConfig, amazonAction,
+  getFeishuStatus, feishuAction,
   type HubSettings, type HealthResp, type TestResult, type SelfCheckResp,
   type AgentVersionResp,
   type FeishuStatus, type FeishuPatrolJob,
-  type AmazonStatus, type AmazonMarketplace, type AmazonVerifyResp,
 } from "../../api/settings";
 import { installAgentStreamUrl } from "../../api/setup";
 import {
@@ -29,7 +28,6 @@ import {
 import { useAuth } from "../../App";
 import SubscriptionLogin from "../../components/settings/SubscriptionLogin";
 import { errText } from "../../lib/errText";
-import CustomDataSources from "./settings/CustomDataSources";
 
 type SaveStatus = "idle" | "saving" | "ok" | "error";
 
@@ -713,7 +711,6 @@ function HealthPanel() {
     { label: "AI · 全局兜底大模型",       key: "ai_chain", nested: "global_fallback" },
     { label: "AI · 视觉识别",             key: "ai_chain", nested: "vision" },
     { label: "Apimart · 图片 / AI 服务", key: "apimart" },
-    { label: "Sorftime · 市场数据",       key: "sorftime" },
     { label: "外部 Agent · Hermes",       key: "runners", nested: "hermes", install: "hermes" },
     { label: "外部 Agent · Codex",        key: "runners", nested: "codex", install: "codex" },
     { label: "外部 Agent · Claude",       key: "runners", nested: "claude", install: "claude" },
@@ -1064,7 +1061,6 @@ const EMPTY: HubSettings = {
   apimart_key: "", apimart_base: "https://api.apimart.ai/v1",
   text_ai_providers: "ivyea-agent,assistant,deepseek,codex,claude",
   vision_ai_providers: "openai,assistant", deepseek_api_key: "", news_feeds: "",
-  sorftime_key: "", sif_key: "", sellersprite_key: "",
   brain_root: "", openai_api_key: "",
   alert_webhook: "", alert_app_id: "", alert_app_secret: "", alert_chat_id: "",
   alert_feishu_domain: "feishu",
@@ -1085,234 +1081,6 @@ const EMPTY: HubSettings = {
 };
 
 // ── 外观 / 显示：字体族 + 全局字号（即时生效 + localStorage，无后端）───────────────
-/** 通知渠道与 AI 预算。管理员专属；非管理员拿到 403 就整块不渲染。 */
-/** 亚马逊官方 API（SP-API + Ads API）。
- *
- *  为什么在"这台机器没有卖家账号"的情况下也要有这一块：用这套系统的人有账号。
- *  凭据能填、数据源能接、规则能吃到官方数据，不该等某台机器恰好有账号才开始做。
- *
- *  凭据只存 IvyeaAgent 一侧（~/.ivyea/.env），ops 不留副本 —— 与飞书那组不同，
- *  这里没有"agent 挂了也要能用"的场景，取数本来就是 agent 干的活。
- */
-function AmazonSection() {
-  const [st, setSt] = useState<AmazonStatus | null>(null);
-  const [busy, setBusy] = useState("");
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [steps, setSteps] = useState<AmazonVerifyResp["steps"]>(undefined);
-  const [profiles, setProfiles] = useState<AmazonVerifyResp["profiles"]>(undefined);
-  const [cred, setCred] = useState({ client_id: "", client_secret: "", refresh_token: "" });
-  const [adsCred, setAdsCred] = useState({ ads_client_id: "", ads_client_secret: "", ads_refresh_token: "" });
-  const [sellerId, setSellerId] = useState("");
-  const [rows, setRows] = useState<AmazonMarketplace[]>([]);
-  const [adsOwnApp, setAdsOwnApp] = useState(false);
-
-  const reload = useCallback(async () => {
-    try {
-      const s = await getAmazonStatus();
-      setSt(s);
-      setRows(s.marketplaces || []);
-      setSellerId(s.seller_id || "");
-      setAdsOwnApp(!!s.ads_uses_own_app);
-    } catch (e: any) {
-      setSt({ ok: false, error: errText(e, "读取失败") });
-    }
-  }, []);
-  useEffect(() => { void reload(); }, [reload]);
-
-  const run = async (name: string, fn: () => Promise<void>) => {
-    setBusy(name); setMsg(null);
-    try { await fn(); } catch (e: any) { setMsg({ ok: false, text: errText(e, "操作失败") }); }
-    finally { setBusy(""); }
-  };
-  const flash = (ok: boolean, text: string) => {
-    setMsg({ ok, text });
-    if (ok) setTimeout(() => setMsg(null), 8000);
-  };
-
-  const save = () => run("save", async () => {
-    // 密钥留空 = 不改（agent 侧同样按"空 = 不动"处理）：
-    // 打开配置页什么都没干、保存一下就把凭据清空，是最不能容忍的一种"顺手"。
-    const body: Record<string, unknown> = {
-      ...Object.fromEntries(Object.entries(cred).filter(([, v]) => v)),
-      ...Object.fromEntries(Object.entries(adsCred).filter(([, v]) => v)),
-      seller_id: sellerId,
-      marketplaces: rows.filter((r) => r.marketplace_id),
-    };
-    const r = await saveAmazonConfig(body);
-    if (r.ok === false) { flash(false, r.error || "保存失败"); return; }
-    setCred({ client_id: "", client_secret: "", refresh_token: "" });
-    setAdsCred({ ads_client_id: "", ads_client_secret: "", ads_refresh_token: "" });
-    flash(true, "已保存（密钥已加密存入 IvyeaAgent，输入框按惯例清空）");
-    await reload();
-  });
-
-  const verify = () => run("verify", async () => {
-    const r = await amazonAction("verify");
-    setSteps(r.steps || []);
-    flash(!!r.ok, r.ok ? "全部通过" : "有步骤没通过，看下面逐步结果");
-    await reload();
-  });
-
-  const loadProfiles = () => run("profiles", async () => {
-    const r = await amazonAction("profiles");
-    setProfiles(r.profiles || []);
-    if (!r.ok) flash(false, r.error || "取广告档案失败");
-  });
-
-  const setRow = (i: number, patch: Partial<AmazonMarketplace>) =>
-    setRows(rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
-  const addRow = () => setRows([...rows, { sid: "", marketplace_id: "", name: "", ads_profile_id: "" }]);
-  const dropRow = (i: number) => setRows(rows.filter((_, idx) => idx !== i));
-
-  const catalog = (st?.catalog || []).map((c) => ({
-    value: c.marketplace_id, label: `${c.country}（${c.region.toUpperCase()}）`,
-  }));
-
-  return (
-    <Section
-      title="亚马逊官方 API"
-      desc="SP-API（库存 / 订单 / 价格）+ Ads API（广告）。填完即用：巡检规则会自动改吃官方数据，官方优先、领星兜底。"
-      keys={[]} vals={{}} onSave={async () => { await save(); }}
-    >
-      <div className="hs-caps">
-        <div className={"hs-cap" + (st?.configured ? " hs-cap-ok" : "")}>
-          <Dot ok={!!st?.configured} /><span>SP-API 凭据</span>
-        </div>
-        <div className={"hs-cap" + (st?.ads_configured ? " hs-cap-ok" : "")}>
-          <Dot ok={!!st?.ads_configured} /><span>广告 API 凭据</span>
-        </div>
-        <div className={"hs-cap" + ((st?.marketplace_count || 0) > 0 ? " hs-cap-ok" : "")}>
-          <Dot ok={(st?.marketplace_count || 0) > 0} />
-          <span>站点 {st?.marketplace_count || 0} 个</span>
-          {(st?.with_ads_profile || 0) > 0 && <em>{st?.with_ads_profile} 个带广告档案</em>}
-        </div>
-        {st?.region && <div className="hs-cap"><span>区域 {st.region.toUpperCase()}</span></div>}
-      </div>
-      {st && st.ok === false && (
-        <div className="hs-hint" style={{ color: "var(--red)" }}>
-          {st.error}{st.hint ? ` —— ${st.hint}` : ""}
-        </div>
-      )}
-
-      <div className="hs-field-group-title">LWA 凭据（开发者中心 → 应用与授权）</div>
-      <div className="hs-hint">
-        三样都来自你自己的 SP-API 应用：<code>client_id</code>、<code>client_secret</code> 在应用详情里，
-        <code>refresh_token</code> 是卖家授权回调后拿到的那串。
-        <b>需要先有亚马逊开发者账号并通过 SP-API 应用审批</b>（周期可能数周，越早申请越好）。
-        保存后密钥不回显 —— 留空表示不改。
-      </div>
-      <div className="hs-row3">
-        <Field label={<><Tag kind="req">必填</Tag>Client ID</>} hint={st?.configured ? "已配置，留空不改" : "未配置"}>
-          <TxtInput value={cred.client_id} onChange={(v) => setCred({ ...cred, client_id: v })}
-            placeholder="amzn1.application-oa2-client..." />
-        </Field>
-        <Field label={<><Tag kind="req">必填</Tag>Client Secret</>} hint={st?.configured ? "已配置，留空不改" : "未配置"}>
-          <SecretInput value={cred.client_secret} onChange={(v) => setCred({ ...cred, client_secret: v })}
-            placeholder={st?.configured ? "••••••••（已保存）" : "amzn1.oa2-cs..."} />
-        </Field>
-        <Field label={<><Tag kind="req">必填</Tag>Refresh Token</>} hint={st?.configured ? "已配置，留空不改" : "未配置"}>
-          <SecretInput value={cred.refresh_token} onChange={(v) => setCred({ ...cred, refresh_token: v })}
-            placeholder={st?.configured ? "••••••••（已保存）" : "Atzr|..."} />
-        </Field>
-      </div>
-      <Field label={<><Tag kind="opt">可选</Tag>Seller ID</>} hint="卖家编号（Merchant Token）。判断 Buy Box 归属时要用它认出「自己」。">
-        <TxtInput value={sellerId} onChange={setSellerId} placeholder="A23SU2M9XL8R0O" />
-      </Field>
-
-      <label className="hs-toggle-line">
-        <input type="checkbox" checked={adsOwnApp} onChange={(e) => setAdsOwnApp(e.target.checked)} />
-        <span>广告 API 用另一套应用</span>
-      </label>
-      <div className="hs-hint">
-        不勾就与上面共用 —— 大多数卖家两边是同一个应用，强迫把同一串东西填两遍只会填错一遍。
-        广告 API 通常<b>单独审批</b>，没批下来也不影响库存那部分先跑起来。
-      </div>
-      {adsOwnApp && (
-        <div className="hs-row3">
-          <Field label="广告 Client ID">
-            <TxtInput value={adsCred.ads_client_id} onChange={(v) => setAdsCred({ ...adsCred, ads_client_id: v })} placeholder="amzn1.application-oa2-client..." />
-          </Field>
-          <Field label="广告 Client Secret">
-            <SecretInput value={adsCred.ads_client_secret} onChange={(v) => setAdsCred({ ...adsCred, ads_client_secret: v })} placeholder="留空不改" />
-          </Field>
-          <Field label="广告 Refresh Token">
-            <SecretInput value={adsCred.ads_refresh_token} onChange={(v) => setAdsCred({ ...adsCred, ads_refresh_token: v })} placeholder="留空不改" />
-          </Field>
-        </div>
-      )}
-
-      <div className="hs-field-group-title">站点</div>
-      <div className="hs-hint">
-        一行一个站点。<b>SID 是与领星共用的连接键</b>：两边都用的话，同一个站点填同一个 SID，
-        规则拿到的就是同一家店（官方优先、领星兜底）；只用亚马逊就随便给个稳定值。
-        区域按站点自动推，不用自己选。
-      </div>
-      {rows.map((r, i) => (
-        <div key={i} className="hs-mkt-row">
-          <TxtInput value={r.sid} onChange={(v) => setRow(i, { sid: v })} placeholder="SID" />
-          <SheetSelect value={r.marketplace_id} onChange={(v) => setRow(i, { marketplace_id: v })}
-            options={catalog} placeholder="选站点" />
-          <TxtInput value={r.name} onChange={(v) => setRow(i, { name: v })} placeholder="显示名（如 欧洲-UK）" />
-          <TxtInput value={r.ads_profile_id} onChange={(v) => setRow(i, { ads_profile_id: v })}
-            placeholder="广告档案 ID（可选）" />
-          <button className="hs-test-btn" type="button" onClick={() => dropRow(i)}>删除</button>
-        </div>
-      ))}
-      <div className="hs-test-row" style={{ gap: 8 }}>
-        <button className="hs-test-btn" type="button" onClick={addRow}>+ 加一个站点</button>
-        <button className="hs-test-btn" type="button" onClick={loadProfiles} disabled={!!busy}>
-          {busy === "profiles" ? "查询中…" : "列出广告档案"}
-        </button>
-        <button className="hs-test-btn" type="button" onClick={save} disabled={!!busy}>
-          {busy === "save" ? "保存中…" : "保存凭据与站点"}
-        </button>
-        <button className="hs-test-btn" type="button" onClick={verify} disabled={!!busy}>
-          {busy === "verify" ? "自检中…" : "自检（真打一次接口）"}
-        </button>
-        {msg && <span className={"hs-test-result " + (msg.ok ? "ok" : "err")}>
-          {msg.ok ? "✓" : "✗"} {msg.text}</span>}
-      </div>
-
-      {profiles && (
-        <div className="hs-pick">
-          {profiles.length === 0 && <span className="hs-hint">没有广告档案。多半是这套凭据还没开广告权限。</span>}
-          {profiles.map((p) => (
-            <div key={p.profile_id} className="hs-pick-item">
-              {p.country} · {p.name || p.type}<em>profileId {p.profile_id}</em>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {steps && steps.length > 0 && (
-        <div className="hs-steps">
-          {steps.map((s) => (
-            <div key={s.step} className={"hs-step" + (s.ok ? " hs-step-done" : "")}>
-              <span className="hs-step-no">{s.ok ? "✓" : "✗"}</span>
-              <div className="hs-step-body">
-                <div className="hs-step-title">{s.step}</div>
-                <div className="hs-step-detail">{s.detail}{s.hint ? ` —— ${s.hint}` : ""}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </Section>
-  );
-}
-
-/** 飞书 / Lark —— 一处配置，四条链路。
- *
- *  以前这里叫「飞书通知」，实际只喂 CPU 告警一条链路；店铺巡检卡片、审批按钮、
- *  飞书对话那三条各自读 IvyeaAgent 和 relay 的配置文件，界面上完全看不见。
- *  结果是同一个飞书应用要在三个地方各填一遍，任何一处漏填的表现都是
- *  「保存成功，但就是收不到消息」——没有任何报错。
- *
- *  现在凭据只填一次：存进 hub settings（服务器告警那条链路自己用，agent 挂了
- *  它照样报警），保存时后端顺手下推给 IvyeaAgent（巡检 / 审批 / 对话共用）。
- *  白名单和巡检任务只存 agent 一份，这里直接读写，不在 ops 侧留副本。
- */
-/** 这一档用分钟还是小时做单位：按默认值定，不随当前值变。 */
 function unitOf(defaultMinutes: number): number {
   return defaultMinutes >= 120 ? 60 : 1;
 }
@@ -2137,7 +1905,7 @@ const COLLAPSED_SECTIONS = new Set(["appearance"]);
 
 /** 说明文字的显隐开关。
  *
- *  **默认必须是"显示"。** 这些说明装的不是废话，是操作指引 ——「登录 sorftime.com
+ *  **默认必须是"显示"。** 这些说明装的不是废话，是操作指引 ——「配置平台凭据
  *  → 账户设置 → API」「留空 = 不带 Token」「保存后自动注册为 MCP 数据源」。默认藏
  *  起来，第一次配置的人打开就是一排空输入框，不知道 key 从哪儿来。所以只记住
  *  "用户主动关过"这件事：嫌烦的人点一次永久清爽，新用户第一次进来照样有指引。 */
@@ -2308,42 +2076,6 @@ export default function HubSettings({ focusSection = "" }: { focusSection?: stri
         </div>
       )}
 
-      {/* -- 核心 2: 数据源 -- */}
-      <Section
-        title="数据源"
-        desc={<>运营数据接口。填 key 保存后自动生效，有哪个用哪个，都填则按场景择优调用。</>}
-        keys={["sorftime_key", "sif_key", "sellersprite_key"]}
-        vals={vals} onSave={save}
-      >
-        <Field
-          label={<><Tag kind="rec">推荐</Tag>Sorftime Key</>}
-          hint={<>市场调研、关键词趋势。登录 sorftime.com → 账户设置 → API。</>}
-        >
-          <SecretInput value={vals.sorftime_key} onChange={v => set("sorftime_key", v)} placeholder="你的 Sorftime key" />
-          <TestButton settingKey="sorftime_key" value={vals.sorftime_key} label="测试" />
-        </Field>
-
-        <Field
-          label={<><Tag kind="rec">推荐</Tag>SIF Key</>}
-          hint={<>深度分析工具箱（关键词竞争、竞品信号、流量异常）。登录 sif.com → 获取 API Key。</>}
-        >
-          <SecretInput value={vals.sif_key} onChange={v => set("sif_key", v)} placeholder="你的 SIF key" />
-          <TestButton settingKey="sif_key" value={vals.sif_key} label="测试" />
-        </Field>
-
-        <Field
-          label={<><Tag kind="opt">可选</Tag>卖家精灵 Secret Key</>}
-          hint={<>竞品关键词分析。保存后自动注册为 MCP 数据源，IvyeaAgent 对话中即可调用。登录 sellersprite.com → 账户 → API Key。</>}
-        >
-          <SecretInput value={vals.sellersprite_key} onChange={v => set("sellersprite_key", v)} placeholder="你的卖家精灵 Secret Key" />
-          <TestButton settingKey="sellersprite_key" value={vals.sellersprite_key} label="测试" />
-        </Field>
-
-      </Section>
-
-      {/* -- 核心 2.5: 自定义 MCP 数据源（内置三家在上面那块，互不影响） -- */}
-      <CustomDataSources />
-
       {/* -- 核心 3: 全局兜底大模型 -- */}
       <Section
         title="全局兜底大模型"
@@ -2475,7 +2207,6 @@ export default function HubSettings({ focusSection = "" }: { focusSection?: stri
 
       {/* 亚马逊官方 API 紧跟数据源：它和领星是同一类东西（数据从哪来），
           只是一个是第一手、一个是转手。 */}
-      <AmazonSection />
 
       {/* ── 系统状态及以下：默认折叠，点开查看 ── */}
       <div className="hs-advanced">
@@ -2660,9 +2391,9 @@ export default function HubSettings({ focusSection = "" }: { focusSection?: stri
         >
           <div className="hs-field-group-title">资讯 RSS 源</div>
           <Field label={<><Tag kind="opt">可选</Tag>资讯 RSS 源</>}
-            hint={<>「资讯」板块的抓取源，每行一条 <code>url | 来源名 | 分类</code>（分类 = <code>ai_industry</code> 或 <code>amazon_seller</code>）。留空 = 用内置默认源。</>}>
+            hint={<>「资讯」板块的抓取源，每行一条 <code>url | 来源名 | 分类</code>（分类 = <code>ai_industry</code> 或 <code>marketplace</code>）。留空 = 用内置默认源。</>}>
             <AreaInput value={vals.news_feeds} onChange={v => set("news_feeds", v)} rows={4}
-              placeholder={"https://example.com/feed.xml | 来源名 | ai_industry\nhttps://.../rss | 卖家资讯 | amazon_seller"} />
+              placeholder={"https://example.com/feed.xml | 来源名 | ai_industry\nhttps://.../rss | 卖家资讯 | marketplace"} />
           </Field>
           <div className="hs-row3">
             <Field label="仪表盘地址">

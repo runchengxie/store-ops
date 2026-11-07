@@ -65,7 +65,7 @@ def _parse_inputs_from_body(body: str) -> list[dict[str, Any]]:
     """Extract input definitions from SKILL.md body.
 
     Looks for patterns like:
-      - `{{asin}}` or `{{asin:placeholder}}` template variables
+      - `{{product_id}}` or `{{product_id:placeholder}}` template variables
       - Explicit `inputs:` YAML block in frontmatter (preferred)
 
     Returns list of {name, type, label, required, placeholder, default, options}.
@@ -180,8 +180,6 @@ def _detect_icon(fm: dict, category: str | None) -> str:
     if fm.get("icon"):
         return str(fm["icon"])
     cat = (category or "").lower()
-    if "amazon" in cat:
-        return "◈"
     if "research" in cat:
         return "◎"
     if "creative" in cat:
@@ -209,6 +207,9 @@ def list_tools(
     tools: list[SkillToolMeta] = []
 
     for m in metas:
+        from app.services.retired_capabilities import retired_reference
+        if retired_reference(skill=m.name):
+            continue
         # Filter
         if category and (m.category or "") != category:
             continue
@@ -244,6 +245,9 @@ def list_pinned_tools() -> list[SkillToolMeta]:
     """Pinned skills only — drives the dynamic sidebar entries. Cheap: no body parse."""
     out: list[SkillToolMeta] = []
     for m in skill_repo.list_skills():
+        from app.services.retired_capabilities import retired_reference
+        if retired_reference(skill=m.name):
+            continue
         if not getattr(m, "pinned", False):
             continue
         try:
@@ -445,7 +449,10 @@ async def run_tool(
     Every run is recorded to the lightweight history store.
     """
     from app.services import skill_runs
+    from app.services.retired_capabilities import retired_reference
 
+    if retired_reference(skill=body.skill_name):
+        raise HTTPException(410, "capability_retired: Capability has been retired (能力已下线)")
     try:
         detail = skill_repo.get_skill(body.skill_name)
     except Exception as exc:

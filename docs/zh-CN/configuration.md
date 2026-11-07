@@ -45,6 +45,6 @@
 
 console 和图片翻译需要相应模型服务。RO/BG/HU 是图片翻译目标语言，不表示另接入了这些国家的店铺。确定性采集、离线巡检和本地草稿不需要模型。
 
-Amazon 数据源、通用外部 Agent 和可选旧工具是独立集成，安装 skill 不授予平台权限。GBrain 已不是知识库运行环境，不应使用旧 GBrain 配置示例。
+仅启用 eMAG 电商 adapter。Amazon 数据源默认项及自动注册已移除，既有私有值保留。通用外部 Agent 仍是独立集成，安装 skill 不授予平台权限。GBrain 已不是知识库运行环境，不应使用旧 GBrain 配置示例。
 
 只有 Agent 子界面有 i18next。英语资源的稳定 ID 为 `en`，不是 `en-US`；保存偏好默认 `zh-CN`，缺失翻译回退 `en`，不支持的保存值回到默认。主工作台没有全局 locale。语言只改变界面显示，不改变 API key、schema、ID、证据或计算。

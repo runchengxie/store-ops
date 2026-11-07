@@ -20,16 +20,15 @@ logger = logging.getLogger("ivyea.routers.hub_settings")
 router = APIRouter()
 
 _SECRET_KEYS: List[str] = [
-    "apimart_key", "sorftime_key", "sif_key", "sellersprite_key",
+    "apimart_key",
     "hermes_api_key", "hermes_fallback_api_key",
     "alert_app_secret", "alert_webhook", "openai_api_key",
-    "ivyea_agent_token", "ivyea_agent_api_key", "lingxing_mcp_key", "lingxing_openapi_secret",
+    "ivyea_agent_token", "ivyea_agent_api_key",
     "vision_api_key",
 ]
 
 # Keys that, when changed, require syncing into Hermes config.
 _HERMES_SYNC_KEYS = {
-    "sorftime_key", "sif_key", "sellersprite_key",
     "hermes_provider", "hermes_model", "hermes_api_key", "hermes_base_url",
     "hermes_fallback_provider", "hermes_fallback_model",
     "hermes_fallback_api_key", "hermes_fallback_base_url",
@@ -138,59 +137,6 @@ async def feishu_setup_action(body: FeishuAction, _u: str = Depends(require_user
                 if k in ("allowed_senders", "allowed_chats")
             })
         return ivyea_agent_service.feishu_action({"action": action, **payload})
-    except Exception as exc:  # noqa: BLE001
-        return {"ok": False, "error": str(exc)}
-
-
-# ── 亚马逊官方 API ──────────────────────────────────────────────────────────
-# 与飞书那组不同，凭据只存 IvyeaAgent 一侧：这里没有"agent 挂了也要能用"的场景。
-
-class AmazonConfig(BaseModel):
-    model_config = ConfigDict(extra="allow")
-
-    # 空串一律当"不改"（界面上没填的框会老实传空串），要清除得在 clear 里点名
-    client_id: str = ""
-    client_secret: str = ""
-    refresh_token: str = ""
-    ads_client_id: str = ""
-    ads_client_secret: str = ""
-    ads_refresh_token: str = ""
-    seller_id: str | None = None
-    region: str | None = None
-    marketplaces: List[Dict[str, Any]] | None = None
-    clear: List[str] | None = None
-
-
-class AmazonAction(BaseModel):
-    action: str
-
-
-@router.get("/settings/amazon")
-async def amazon_status(_u: str = Depends(require_user)):
-    from app.services import ivyea_agent_service
-    try:
-        return ivyea_agent_service.amazon_status()
-    except Exception as exc:  # noqa: BLE001 —— agent 没起来时给人话，别 500
-        return {"ok": False, "error": str(exc),
-                "hint": "IvyeaAgent 本地服务（默认 127.0.0.1:8765）没连上。"
-                        "亚马逊凭据存在它那边，它不在就没法读写。"}
-
-
-@router.post("/settings/amazon")
-async def amazon_configure(body: AmazonConfig, _u: str = Depends(require_user)):
-    from app.services import ivyea_agent_service
-    try:
-        return ivyea_agent_service.configure_amazon(body.model_dump(exclude_none=True))
-    except Exception as exc:  # noqa: BLE001
-        return {"ok": False, "error": str(exc)}
-
-
-@router.post("/settings/amazon/action")
-async def amazon_do(body: AmazonAction, _u: str = Depends(require_user)):
-    """verify（真打一次接口）/ profiles（列广告档案，用来填 profileId）。"""
-    from app.services import ivyea_agent_service
-    try:
-        return ivyea_agent_service.amazon_action(body.model_dump())
     except Exception as exc:  # noqa: BLE001
         return {"ok": False, "error": str(exc)}
 
@@ -444,7 +390,6 @@ async def settings_health(_u: str = Depends(require_user)):
         "ai_chain":  ai_chain,
         "ivyea_agent": ivyea_agent_result,
         "apimart":   _check_key("apimart_key", "API Key 已设置"),
-        "sorftime":  _check_key("sorftime_key", "API Key 已设置"),
         "brain_root": {
             "ok": Path(brain_root).exists(),
             "detail": brain_root if Path(brain_root).exists() else f"目录不存在：{brain_root}",

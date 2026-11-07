@@ -104,7 +104,7 @@ def test_hub_settings_env_fallback_still_works(monkeypatch, tmp_path, restore_st
     from app.core.config import settings
 
     monkeypatch.setattr(settings, "data_dir", tmp_path)
-    monkeypatch.setenv("SORFTIME_KEY", "sk-from-env")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-from-env")
     secret_env.harvest()
 
-    assert hub_settings.get("sorftime_key") == "sk-from-env"
+    assert hub_settings.get("openai_api_key") == "sk-from-env"

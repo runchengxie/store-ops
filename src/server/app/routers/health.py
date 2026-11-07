@@ -146,7 +146,7 @@ def jobs_list(
 
 @router.get("/audit")
 def audit_list(
-    module: str = Query("", description="按板块筛：settings / git / autofix / lingxing …"),
+    module: str = Query("", description="按板块筛：settings / git / autofix / emag …"),
     actor: str = Query("", description="按操作人筛（邮箱）"),
     limit: int = Query(200, ge=1, le=2000),
     fmt: str = Query("json", pattern="^(json|csv)$"),

@@ -45,7 +45,7 @@ The standard application still has session authentication and administrator chec
 
 Console chat and image translation need their configured providers. Image translation supports RO/BG/HU as target languages, not additional connected eMAG stores. Deterministic evidence collection, offline audits and local drafts do not require a model.
 
-Amazon data connectors, generic external Agents and optional legacy tools remain separate integrations. Installing a skill does not grant platform access. GBrain is no longer the knowledge base runtime; old GBrain setup instructions and environment examples should not be used.
+Only the eMAG commerce adapter is enabled. Retired Amazon provider defaults and automatic registrations are removed; existing private values are preserved. Generic external Agents remain separate integrations. Installing a skill does not grant platform access. GBrain is no longer the knowledge base runtime; old GBrain setup instructions and environment examples should not be used.
 
 ## Locale configuration
 

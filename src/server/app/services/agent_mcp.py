@@ -1,8 +1,7 @@
 """IvyeaAgent 的 MCP 注册表（~/.ivyea/mcp.json）读写。
 
 为什么不走 agent daemon：serve 只暴露了 `/v1/mcp/self-config`，没有增删查。
-而 IvyeaOps 本来就在直接写这个文件（hermes_config_sync.sync_agent_mcp 把数据源
-密钥同步进去），两边同一台机器、同一个 HOME 约定。所以这里沿用同一条路，
+而 IvyeaOps 本来就在直接写这个文件（the generic MCP editor manages explicit entries），两边同一台机器、同一个 HOME 约定。所以这里沿用同一条路，
 不为了一个配置读写再逼 agent 发一次版。
 
 agent 侧每次调 MCP 都重新读盘（tools_general._mcp_servers → config.load_mcp），
@@ -24,9 +23,8 @@ from app.services.hermes_config_sync import _agent_mcp_file  # noqa: PLC2701
 
 _NAME_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 
-# 这几台由「系统配置 → 数据源」的密钥自动同步进来（sync_agent_mcp）。删掉后
-# 下次保存设置又会回来 —— UI 得把这件事说清楚，否则用户会以为删除失败。
-MANAGED_SERVERS = {"sorftime", "sif_mcp", "sellersprite"}
+# Application-owned provider registration is empty; explicit user entries remain.
+MANAGED_SERVERS: set[str] = set()
 
 TRANSPORTS = ("http", "sse", "stdio")
 

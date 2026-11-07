@@ -20,7 +20,7 @@ from __future__ import annotations
 import csv
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 logger = logging.getLogger("ivyea.services.evidence_trace")
 
@@ -86,13 +86,3 @@ def trace(source_paths: List[Path], target: str, *,
                   f"可能是这条结论跨多份报表聚合而来，或源文件已被替换。",
         "rows": [],
     }
-
-
-def trace_ad_audit(job_id: str, target: str) -> Optional[Dict[str, Any]]:
-    """广告审计任务的溯源。任务不存在回 None（让路由回 404）。"""
-    from app.services.ad_audit import _job_dir, get_job
-    if not get_job(job_id):
-        return None
-    jd = _job_dir(job_id)
-    sources = sorted(jd.glob("source_*.csv")) + sorted(jd.glob("source_*.xlsx"))
-    return trace(sources, target)

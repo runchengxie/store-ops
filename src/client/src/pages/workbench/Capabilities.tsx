@@ -34,7 +34,7 @@ import {
   type IvyeaSkillInfo,
 } from "../../api/ivyeaAgent";
 import { agentSyncRun, agentSyncStatus, type AgentSyncStatus } from "../../api/skill";
-import { getSettings, patchSettings } from "../../api/settings";
+import { patchSettings } from "../../api/settings";
 import { marketBrowse, marketStatus, type MarketItem } from "../../api/client";
 import { errText } from "../../lib/errText";
 import { APPROVAL_MODES, approvalLabel, type ApprovalWire } from "../../lib/approvalModes";
@@ -619,54 +619,8 @@ function AgentsTab() {
 }
 
 // ── 授权 ─────────────────────────────────────────────────────────────────────
-const DATA_SOURCES: { key: string; label: string; note: string }[] = [
-  { key: "sorftime_key", label: "Sorftime", note: "市场调研 / 关键词 / 类目数据" },
-  { key: "sellersprite_key", label: "卖家精灵", note: "选品与流量词数据" },
-  { key: "sif_key", label: "SIF", note: "补充数据源" },
-  { key: "lingxing_mcp_key", label: "领星 ERP", note: "店铺与广告数据（写操作另有开关）" },
-];
-
 function AuthTab() {
-  const navigate = useNavigate();
-  const [settings, setSettings] = useState<Record<string, any> | null>(null);
-  const [secretKeys, setSecretKeys] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let alive = true;
-    getSettings()
-      .then((d) => { if (alive) { setSettings(d.settings as any); setSecretKeys(d.secret_keys || []); } })
-      .catch(() => void 0)
-      .finally(() => alive && setLoading(false));
-    return () => { alive = false; };
-  }, []);
-
-  if (loading) return <div className="skeleton line lg" />;
-
-  return (
-    <Section title="原平台数据源授权" sub="以下配置用于原有 Amazon 能力，不代表已接入 eMAG。eMAG 凭证独立保存在操作系统凭据中。">
-      <table className="tbl cap-table">
-        <thead><tr><th>数据源</th><th>用途</th><th>状态</th></tr></thead>
-        <tbody>
-          {DATA_SOURCES.map((d) => {
-            // 后端把已设置的密钥列在 secret_keys 里（值本身不回传）；
-            // 老版本没有这个字段时退回看 settings 里有没有非空值。
-            const configured = secretKeys.includes(d.key) || !!String((settings || {})[d.key] || "").trim();
-            return (
-              <tr key={d.key}>
-                <td><b>{d.label}</b></td>
-                <td style={{ color: "var(--t3)" }}>{d.note}</td>
-                <td>{configured
-                  ? <span className="cs-ok">✓ 已接入</span>
-                  : <span style={{ color: "var(--t3)" }}>未配置</span>}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      <button className="cs-btn" onClick={() => openSettings()}>去系统配置填密钥</button>
-    </Section>
-  );
+ return <Section title="平台授权" sub="eMAG 凭证由操作系统凭据管理。通用模型和 MCP 连接在系统配置中管理。"><button className="cs-btn" onClick={() => openSettings()}>打开系统配置</button></Section>;
 }
 
 // ── 页面 ─────────────────────────────────────────────────────────────────────
@@ -710,7 +664,6 @@ function CapabilitiesInner() {
 
       <div className="wb-enter" key={active}>
         {active === "emag" && <EmagCapabilities isAdmin={isAdmin} />}
-        {active !== "emag" && <p style={{padding:'10px 16px',lineHeight:1.7}}>通用能力与原平台工具：使用前核对技能/数据源的适用平台；Amazon ASIN、广告和关键词工具未适配 eMAG PNK。</p>}
         {active === "community" && <CommunityMarket embedded />}
         {active === "skills" && <SkillsTab canRunSkillHub={canMarket} />}
         {active === "mcp" && <McpTab isAdmin={isAdmin} />}

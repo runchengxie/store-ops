@@ -16,7 +16,7 @@ The [eMAG API overview](https://marketplace.emag.ro/infocenter/emag-academy/how-
 | Scheduling | Preview a server-time schedule and export a disabled draft | No scheduler currently consumes eMAG drafts |
 | Research and translation | Explore the store's own catalog; configured providers can translate images | Catalog distribution is not market demand or competitor sales |
 
-The fork still exposes Amazon-specific API, legacy pages, skills and background tasks. They must remain until their consumers, stored data and migration paths have been inventoried. The separate price API is disabled by default; production permissions and concrete values still require verification. Product content, stock and order writes remain unimplemented.
+The fork now enables only the eMAG adapter. Amazon-specific APIs, legacy pages, skills and background tasks have been retired; private historical data and credentials are preserved. The separate price API is disabled by default; production permissions and concrete values still require verification. Product content, stock and order writes remain unimplemented.
 
 ## Moving toward an eMAG-focused project
 

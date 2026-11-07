@@ -48,11 +48,10 @@ _log = logging.getLogger(__name__)
 def _detect_capabilities() -> dict[str, bool]:
     """Return a snapshot of what the running environment supports."""
     from app.services.ai_synthesis_service import _deepseek_key, _apimart_key, has_vision_capability
-    from app.services.runners import _find_bin
     return {
         "text_llm": bool(_deepseek_key() or _apimart_key()),
         "vision_llm": has_vision_capability(),
-        "mcp_hermes": bool(_find_bin("hermes")),
+        "mcp_hermes": False,
     }
 
 
@@ -65,7 +64,7 @@ def _capabilities_block() -> str:
     lines = ["【当前系统能力——生成 Skill 时必须严格遵守】"]
     lines.append(f"  · 文本生成（llm-only）：{'✓ 可用' if caps['text_llm'] else '✗ 不可用，禁止生成需要 LLM 的 Skill'}")
     lines.append(f"  · 图片/视觉分析（file 类型参数）：{'✓ 可用，已配置提供商：' + vision_detail if caps['vision_llm'] else '✗ 不可用（未配置 Apimart/OpenAI/assistant），禁止生成需要上传图片的 Skill'}")
-    lines.append(f"  · 实时市场数据（mcp）：{'✓ 可用（hermes + sorftime MCP）' if caps['mcp_hermes'] else '✗ 不可用，禁止把 runtime 设为 mcp'}")
+    lines.append(f"  · 实时市场数据（mcp）：{'✓ 可用（已核实的 MCP）' if caps['mcp_hermes'] else '✗ 不可用，禁止把 runtime 设为 mcp'}")
     lines.append("  ⚠ 如果某项能力不可用，你必须：①改用可用能力替代，或②在 clarifications 中告知用户此需求当前无法实现。禁止生成依赖不可用能力的 Skill。")
     return "\n".join(lines)
 
@@ -74,11 +73,7 @@ def _capabilities_block() -> str:
 # Shared knowledge injected into prompts
 # ---------------------------------------------------------------------------
 
-_MCP_TOOLS_DESC = """运行环境里有这些 MCP 工具可供该 Skill 被运行时使用（写步骤时可引用它们）：
-  · Sorftime（`mcp_sorftime_*`）：关键词详情/趋势、商品报告/流量词/评论、类目报告等
-  · SIF（`mcp_sif_*`）：关键词竞争、竞品关键词信号、流量异常
-  · 卖家精灵 SellerSprite（`mcp_sellersprite_*`）：关键词流量、ASIN 关键词、竞品词分析
-真实抓数据是 Skill **被运行时**才发生的事，由用户在工具页填入真实参数后触发。"""
+_MCP_TOOLS_DESC = "MCP availability must be verified against the configured tool catalog. Do not invent or assume external tools."
 
 _TOOL_KINDS = ("report", "transform", "lookup", "workflow")
 
@@ -86,7 +81,7 @@ _TOOL_KINDS = ("report", "transform", "lookup", "workflow")
 # visual layer and is only valid when vision_llm capability is available.
 _ALLOWED_INPUT_TYPES = (
     "text", "textarea", "number", "select", "boolean",
-    "asin", "marketplace", "keyword", "date", "file",
+    "marketplace", "keyword", "date", "file",
 )
 
 _IDENT_RE = re.compile(r"^[a-zA-Z_]\w*$")
@@ -118,11 +113,11 @@ _DEFAULT_PROMPTS: dict[str, str] = {
   "runtime": "llm-only | mcp（需要调用 mcp_ 工具抓实时市场数据时才填 mcp，且必须确认 mcp_hermes 能力可用）",
   "needs_vision": false,
   "name": "建议的英文 skill 名（小写+连字符，符合 ^[a-z][a-z0-9_-]{1,63}$）",
-  "category": "建议分类路径，如 amazon/listing",
+  "category": "建议分类路径，如 operations/listing",
   "icon": "一个贴切的 emoji",
   "description": "一句话英文描述",
   "description_zh": "一句话中文描述",
-  "candidate_inputs": [{"name":"asin","label":"产品ASIN","type":"asin","required":true}],
+  "candidate_inputs": [{"name":"product_id","label":"商品ID","type":"text","required":true}],
   "output_format": "markdown | text | table",
   "clarifications": [
     {"question":"仅当需求真的有歧义或超出当前系统能力时才提；最多3条；没问题则给空数组",
@@ -154,7 +149,7 @@ _DEFAULT_PROMPTS: dict[str, str] = {
   "tool_kind": "report|transform|lookup|workflow",
   "runtime": "llm-only|mcp",
   "inputs": [
-    {"name":"asin","label":"产品ASIN","type":"asin","required":true,"placeholder":"如 B0XXXXXXXX","default":"","options":[]}
+    {"name":"product_id","label":"商品ID","type":"text","required":true,"placeholder":"如 B0XXXXXXXX","default":"","options":[]}
   ],
   "steps": ["第1步：...","第2步：...（需要抓数据时写明调用哪个 mcp_ 工具；图片分析步骤写明使用 {{image}} 参数）"],
   "output_schema": "产出/报告的结构说明",
@@ -162,7 +157,7 @@ _DEFAULT_PROMPTS: dict[str, str] = {
   "pitfalls": ["注意事项/易错点"]
 }
 
-inputs 的 name 必须是合法标识符；type 取值范围：text,textarea,number,select,boolean,asin,marketplace,keyword,date,file
+inputs 的 name 必须是合法标识符；type 取值范围：text,textarea,number,select,boolean,marketplace,keyword,date,file
 （file 类型 = 图片/文件上传，只有 vision_llm 能力可用时才能用）
 步骤要具体可执行，且只引用当前环境能力范围内的工具。""",
     "03_review": """你是一位严格的方案评审专家。请挑刺下面这份 Skill 方案，找出会导致"生成后跑不通/体验差"的问题。
@@ -176,7 +171,7 @@ inputs 的 name 必须是合法标识符；type 取值范围：text,textarea,num
 
 重点检查：
 ①引用的 mcp_ 工具是否真实存在、参数是否对；
-②inputs 是否齐全、type 是否合理（允许：text,textarea,number,select,boolean,asin,marketplace,keyword,date,file）；
+②inputs 是否齐全、type 是否合理（允许：text,textarea,number,select,boolean,marketplace,keyword,date,file）；
 ③步骤是否可执行、有无缺口；
 ④runtime 判断：需要实时数据但 mcp_hermes 不可用 → 必须改 llm-only；需要图片但 vision_llm 不可用 → 必须标注无法实现；
 ⑤file 类型输入只有 vision_llm 可用时才合法；
@@ -211,7 +206,7 @@ inputs 的 name 必须是合法标识符；type 取值范围：text,textarea,num
 1. YAML frontmatter（--- 包裹），必须包含：
    - name / description / description_zh / category / icon
    - inputs: 顶层数组，每项 {name,label,type,required,placeholder,default,options}
-     · type 只能是：text | textarea | number | select | boolean | asin | marketplace | keyword | date | file
+     · type 只能是：text | textarea | number | select | boolean | marketplace | keyword | date | file
      · file 类型用于图片/文件上传，渲染层会生成文件选择器并自动 base64 编码
      · 不得使用 image、images、upload 等非标准类型
    - tool: 显式规格块，形如
@@ -254,7 +249,7 @@ inputs 的 name 必须是合法标识符；type 取值范围：text,textarea,num
    - **保留**原有的 name、category（不得改名）；补全缺失的 description / description_zh / icon
    - 新增顶层 inputs 数组：从文档内容里提炼用户执行该 Skill 时真正需要提供的 2-5 个参数，
      每项 {name,label,type,required,placeholder,default,options}
-     · type 只能是：text | textarea | number | select | boolean | asin | marketplace | keyword | date | file
+     · type 只能是：text | textarea | number | select | boolean | marketplace | keyword | date | file
      · file 类型只有 vision_llm 能力可用时才能用
      · 参数要贴合文档实际用途——宁少勿滥，一个 textarea 型的核心输入也完全可以
    - 新增 tool: 规格块：

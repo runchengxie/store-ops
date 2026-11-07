@@ -23,7 +23,6 @@ const FEATURE_MAP: [string, string][] = [
   ["/market", "市场调研"],
   ["/playbook", "上新打法"],
   ["/ad-audit", "广告诊断"],
-  ["/amazon", "ASIN 工具"],
   ["/brain", "知识库工作台"],
   ["/news", "资讯"],
   ["/freight", "运费"],

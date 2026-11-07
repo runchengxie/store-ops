@@ -1,7 +1,7 @@
 """一条命令跑评测。
 
-    python -m app.evals.cli --suite ads
-    python -m app.evals.cli --suite ads --system assistant --judge ivyea-agent
+    python -m app.evals.cli --suite <suite>
+    python -m app.evals.cli --suite <suite> --system assistant --judge ivyea-agent
 
 `run_suite` 早就写好了，但此前**没有任何东西调用它** —— 施工图里"一条命令出报告"
 这条验收其实一直没达成。这个文件补上那条命令。
@@ -47,7 +47,7 @@ def _runner(provider: str):
 
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description="跑一个评测套件")
-    ap.add_argument("--suite", default="ads")
+    ap.add_argument("--suite", required=True)
     ap.add_argument("--system", default="assistant", help="被测 provider")
     ap.add_argument("--judge", default="deepseek", help="判官 provider（必须与被测不同）")
     ap.add_argument("--limit", type=int, default=0)

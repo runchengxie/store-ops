@@ -97,13 +97,6 @@ def test_case_missing_required_fields_fails_loudly(tmp_path):
         runner.load_cases("s", root=tmp_path)
 
 
-def test_shipped_ads_cases_are_valid():
-    """仓库里带的种子案例本身要合法，否则第一个来贡献案例的人会照着抄错。"""
-    cases = runner.load_cases("ads")
-    assert len(cases) >= 2
-    for c in cases:
-        assert c["expected_points"] and c["prompt"]
-        assert "input" in c
 
 
 # ── 整轮 ────────────────────────────────────────────────────────────────

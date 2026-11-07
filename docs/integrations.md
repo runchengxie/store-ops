@@ -9,7 +9,7 @@ The deterministic eMAG collectors and replay CLI operate without a chat model. T
 | External MCP clients | Read imported snapshots/receipts and save scoped local reports | Separate bearer token; no credential access or general REST proxy |
 | Image provider | Image generation/translation | Requires configured provider and human review |
 | Hermes, Codex, Claude and other external tools | Optional runner/session integrations | Tool installation and versions are not guaranteed by a catalog label |
-| Lingxing/Sorftime/SellerSprite/SIF | Original platform integrations | Their Amazon data is not eMAG market evidence |
+| Retired platform integrations | Amazon/Lingxing/Sorftime/SellerSprite/SIF implementations and automatic registrations removed | Existing private external configuration and historical records are not deleted |
 
 The optional Hermes installer points to `hermes-agent.nousresearch.com`. The previous description of an Anthropic Hermes gateway was incorrect. This audit did not install or test that external product.
 

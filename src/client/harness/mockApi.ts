@@ -1,3 +1,4 @@
+import { platformReply } from './platformFixture';
 import {researchReply} from './researchFixture';
 import clearanceFixture from './clearanceFixture.json';
 import { playbookReply } from './playbookFixture';
@@ -131,7 +132,7 @@ const TURNS = [
       "",
       "![生成的主图](/ivyea-logo.png)",
       "",
-      "参考的竞品页在 [这里](https://www.amazon.com/dp/B0EXAMPLE1)，原图也留一份：",
+      "参考的竞品页在 [这里](https://example.org/product/reference)，原图也留一份：",
       "",
       "/art/bg.png",
       "",
@@ -193,255 +194,13 @@ const ROUTES: Array<[string, Canned | ((url: string) => Canned)]> = [
   ["/emag/stores/demo-ro/job", {run_id:"synthetic-run",status:"complete",stage:"complete",mode:"existing_snapshot",snapshot_id:"demo-v1",delta_available:false,changes:[]}],
   ["/emag/stores/demo-ro", {store_id:"demo-ro",snapshot_id:"demo-v1",captured_at:"2026-10-28T00:00:00Z",source:"synthetic-harness",coverage:["offers"],limitations:["Synthetic UI fixture; not store evidence"],summary:{offers:1,invalid_price:1,invalid_price_with_stock:1},commercial_summary:{orders_fbe_count:2,orders_seller_count:0,returns_fbe_count:1,returns_seller_count:0,invoice_count:2,invoice_amount_unknown:1,window:{start:"2026-10-01",end:"2026-10-28"},inventory:{general_stock_total:3,aging_total:4,mismatched_skus:1,aging_bands:{"365+":2},stock_rows_unknown:0,aging_rows_unknown:1},invoice_totals:[{category:"FC",currency:"RON",amount_as_reported:"-2.50"}]},issues:[{issue_id:"demo-issue",id:1,reason:"invalid_price",part_number:"DEMO-SKU",name:"Demo product",sale_price:"12.50",currency:"RON",general_stock:3,platform_status:{value:2,errors:"Synthetic price review"},state:"pending",revision:0,history:[]}],records:[]}],
   ["/emag/stores", [{store_id:"demo-ro"}]],
-  /* ── 运营驾驶舱 / 用户管理 ────────────────────────────────────────────────
-     这几条以前没有，兜底的 `{}` 让 MarketTraffic 的 `items.filter` 直接把整页
-     炸成「页面渲染出错」—— 于是驾驶舱和用户管理在验证台上根本画不出来，
-     排版问题也就无从验起。字段名照抄 api/home.ts 的 interface，不是编的。 */
-  ["/home/market-watch", [
-    { id: "mw1", query: "wireless earbuds", marketplace: "US", data_source: "sorftime", label: "无线耳机", ts: 1780000000 },
-    { id: "mw2", query: "yoga mat", marketplace: "US", data_source: "sorftime", label: "瑜伽垫", ts: 1780100000 },
-    { id: "mw3", query: "desk lamp", marketplace: "DE", data_source: "sorftime", label: "台灯", ts: 1780200000 },
-  ]],
-  ["/home/market-series", (() => {
-    // MarketSeries 的字段是 market / own / competitor（见 api/home.ts）。
-    const days = Array.from({ length: 30 }, (_, i) =>
-      new Date(1780300000000 - (29 - i) * 86400000).toISOString().slice(0, 10));
-    return {
-      query: "wireless earbuds", marketplace: "US", data_source: "sorftime",
-      market: days.map((day, i) => ({
-        day,
-        search_volume: 42000 + Math.round(Math.sin(i / 4) * 6000) + i * 180,
-        total_sales: 8600 + Math.round(Math.cos(i / 5) * 900) + i * 40,
-        avg_price: 26.5 + Math.sin(i / 7) * 1.8,
-      })),
-      own: days.map((day, i) => ({ day, value: 320 + Math.round(Math.sin(i / 3) * 40) + i * 3 })),
-      competitor: days.map((day, i) => ({ day, value: 480 + Math.round(Math.cos(i / 3) * 55) + i * 2 })),
-    };
-  })()],
-  ["/home/keywords", [
-    { id: "k1", keyword: "wireless earbuds", marketplace: "US", data_source: "sorftime", label: "", ts: 1780000000, data: null, data_ts: null },
-    { id: "k2", keyword: "bluetooth headphones", marketplace: "US", data_source: "sorftime", label: "", ts: 1780100000, data: null, data_ts: null },
-  ]],
-  ["/home/keyword-pulse", []],
-  ["/home/watch-snapshots", []],
-  ["/home/watch", [
-    { id: "w1", asin: "B0CXXXX111", marketplace: "US", data_source: "sorftime", kind: "own", label: "自家主推", ts: 1780000000 },
-    { id: "w2", asin: "B0CYYYY222", marketplace: "US", data_source: "sorftime", kind: "competitor", label: "竞品 A", ts: 1780100000 },
-  ]],
-  ["/home/alerts", [
-    { asin: "B0CYYYY222", marketplace: "US", kind: "competitor", label: "竞品 A",
-      metric: "price", from: 29.99, to: 24.99, diff: -5, ts: 1780300000 },
-    { asin: "B0CXXXX111", marketplace: "US", kind: "own", label: "自家主推",
-      metric: "bsr", from: 1820, to: 2540, diff: 720, ts: 1780310000 },
-  ]],
-  /* ── 驾驶舱 · 促销日历 / 广告看板 ────────────────────────────────────────
-     字段名照抄 api/cockpit.ts 的 interface。倒计时用**相对现在**的时刻生成，
-     否则钉死的时间戳过两天就全变成"已结束"，验证台上永远看不到红色的紧急态。 */
-  ["/cockpit/promotions", (() => {
-    const iso = (h: number) => new Date(now + h * 3600_000).toISOString();
-    const local = (h: number) => new Date(now + h * 3600_000).toISOString().slice(0, 19).replace("T", " ");
-    const mk = (o: Record<string, unknown>) => ({
-      currency_icon: "£", status_raw: "ACTIVE", status_label: "进行中",
-      country: "英国", tz: "Europe/London", discount: "",
-      sales_amount: 0, sales_volume: 0, budget: null, cost: null,
-      budget_used_pct: null, last_sync_time: iso(-2), sync_age_hours: 2,
-      asins: [], asin_count: 0, seconds_to_start: -3600, ...o,
-    });
-    return {
-      generated_at: iso(0), source: "lingxing",
-      scope: { sids: [1863, 1872], store_count: 2, horizon_days: 30, include_ended: false },
-      stores: [{ sid: 1863, name: "欧洲-UK", code: "UK", currency: "GBP" },
-               { sid: 1872, name: "日本-JP", code: "JP", currency: "JPY" }],
-      items: [
-        mk({ id: "coupon:1863:c1", promotion_id: "c1", kind: "coupon", kind_label: "优惠券",
-             name: "Save £2 on 折叠露营椅", sid: 1863, store: "欧洲-UK", marketplace: "UK",
-             start_at: iso(-40), end_at: iso(3.2), start_local: local(-40), end_local: local(3.2),
-             seconds_to_end: 3.2 * 3600, phase: "running", discount: "£2.00",
-             budget: 1000, cost: 870, budget_used_pct: 87, sales_amount: 2140, sales_volume: 96,
-             asin_count: 2, asins: [
-               { asin: "B0CXXXX111", title: "折叠露营椅 便携带靠背", msku: "CH-001",
-                 image: "", url: "https://www.amazon.co.uk/dp/B0CXXXX111", sales_price: 28.99, stock: 412 },
-               { asin: "B0CXXXX112", title: "折叠露营椅 双人款", msku: "CH-002",
-                 image: "", url: "https://www.amazon.co.uk/dp/B0CXXXX112", sales_price: 46.5, stock: 88 },
-             ] }),
-        mk({ id: "seckill:1872:s1", promotion_id: "s1", kind: "seckill", kind_label: "秒杀",
-             name: "アウトドアチェア タイムセール", sid: 1872, store: "日本-JP", marketplace: "JP",
-             currency_icon: "JP¥", tz: "Asia/Tokyo", country: "日本",
-             start_at: iso(-6), end_at: iso(19), start_local: local(-6), end_local: local(19),
-             seconds_to_end: 19 * 3600, phase: "running", type_label: "Lightning Deal",
-             product_quantity: 3, sold_rate: 0.62, sales_amount: 184000, sales_volume: 41,
-             asin_count: 1, asins: [{ asin: "B0JPPPP777", title: "アウトドアチェア 軽量", msku: "JP-CH-1",
-               image: "", url: "https://www.amazon.co.jp/dp/B0JPPPP777", sales_price: 4480, stock: 156 }] }),
-        mk({ id: "manage:1863:m1", promotion_id: "m1", kind: "manage", kind_label: "管理促销",
-             name: "买二免一 · 秋季清仓", sid: 1863, store: "欧洲-UK", marketplace: "UK",
-             status_raw: "APPROVED", status_label: "已通过·未开始",
-             start_at: iso(52), end_at: iso(220), start_local: local(52), end_local: local(220),
-             seconds_to_start: 52 * 3600, seconds_to_end: 220 * 3600, phase: "upcoming",
-             product_quantity: 12 }),
-        mk({ id: "vip_discount:1863:v1", promotion_id: "v1", kind: "vip_discount",
-             kind_label: "会员折扣", name: "Prime 专享 15% OFF", sid: 1863, store: "欧洲-UK",
-             marketplace: "UK", start_at: iso(-100), end_at: iso(96),
-             start_local: local(-100), end_local: local(96), seconds_to_end: 96 * 3600,
-             phase: "running", discount: "15%" }),
-      ],
-      summary: { total: 4, running: 3, upcoming: 1, ending_24h: 2, ending_72h: 2,
-                 budget_risk: 1, with_asin: 2 },
-      freshness: { known: true, stale: false, age_hours: 2,
-                   hint: "促销数据由「LINGXING助手」浏览器插件同步。最近一次同步在 2 小时前。" },
-      errors: [],
-    };
-  })()],
-  ["/cockpit/ads", (() => {
-    const m = (spend: number, sales: number, orders: number, clicks: number, impressions: number) => ({
-      spend, sales, orders, clicks, impressions,
-      acos: sales ? +(spend / sales).toFixed(4) : null,
-      roas: spend ? +(sales / spend).toFixed(2) : null,
-      ctr: impressions ? +(clicks / impressions).toFixed(4) : null,
-      cvr: clicks ? +(orders / clicks).toFixed(4) : null,
-      cpc: clicks ? +(spend / clicks).toFixed(2) : null,
-    });
-    const camp = (o: Record<string, unknown>) => ({
-      marketplace: "UK", currency: "GBP", state: "enabled", serving_status: "DELIVERING",
-      targeting_type: "manual", breakeven_acos: 0.4, target_acos: 0.28,
-      prev: null, spend_change_pct: null, anomalies: [], ...o,
-    });
-    return {
-      generated_at: new Date(now).toISOString(), source: "lingxing",
-      scope: { sids: [1863, 1872], days: 7, store_count: 2,
-               skipped: [{ sid: 1870, name: "欧洲-TR", reason: "该店未开通广告" },
-                         { sid: 1871, name: "欧洲-PL", reason: "该店未开通广告" }] },
-      totals: m(1284.4, 4630.2, 173, 2416, 148900),
-      prev_totals: m(1102.0, 4890.0, 191, 2288, 151200),
-      delta: { spend_pct: 16.6, sales_pct: -5.3, orders_pct: -9.4, acos_delta: 0.0524 },
-      by_store: [
-        { sid: 1863, store: "欧洲-UK", marketplace: "UK", currency: "GBP", ...m(902.1, 3410.5, 128, 1702, 101300),
-          target: { margin: 0.4, breakeven_acos: 0.4, target_acos: 0.28,
-                    note: "毛利率≈40%(店铺均值)，目标ACOS=28%(=0.7×毛利)；6 个活动用各自产品毛利单独定目标" } },
-        { sid: 1872, store: "日本-JP", marketplace: "JP", currency: "JPY", ...m(382.3, 1219.7, 45, 714, 47600),
-          target: { margin: 0.33, breakeven_acos: 0.33, target_acos: 0.23, note: "毛利率≈33%(店铺均值)，目标ACOS=23%" } },
-      ],
-      by_campaign: [
-        camp({ sid: 1863, store: "欧洲-UK", campaign_id: "125876403477002", name: "绿植零号手动",
-               daily_budget: 20, today_spend: 19.5, budget_used_pct: 97.5,
-               ...m(412.6, 1680.0, 62, 806, 42100), acos_vs_target: -0.033, health: "good",
-               spend_change_pct: 12.4,
-               anomalies: [{ code: "ads.budget_capped", severity: "info", label: "今日预算见底",
-                             detail: "今天已花掉日预算的 98%，接近停投。",
-                             intent: { op_type: "campaign_budget", sid: 1863, target_id: "125876403477002",
-                                       target_name: "绿植零号手动", cur_value: 20, new_value: 23,
-                                       rationale: "今日预算见底，小幅提预算" } }] }),
-        camp({ sid: 1863, store: "欧洲-UK", campaign_id: "125876403477010", name: "露营椅自动-宽泛",
-               serving_status: "CAMPAIGN_OUT_OF_BUDGET", daily_budget: 10, today_spend: 10,
-               budget_used_pct: 100, ...m(286.9, 402.1, 11, 512, 31800),
-               acos_vs_target: 0.433, health: "bad", spend_change_pct: 41.2,
-               anomalies: [
-                 { code: "ads.acos_breach", severity: "crit", label: "ACOS 破位",
-                   detail: "ACOS 71% 已是目标 28% 的 2.5 倍，且高于盈亏平衡线 —— 每卖一单都在亏。",
-                   intent: { op_type: "campaign_budget", sid: 1863, target_id: "125876403477010",
-                             target_name: "露营椅自动-宽泛", cur_value: 10, new_value: 8.5,
-                             rationale: "ACOS 71% 超目标 28%，降预算止血" } },
-                 { code: "ads.out_of_budget", severity: "info", label: "预算已耗尽停投",
-                   detail: "预算已花完，今天不再出广告。ACOS 未达目标，先别急着加预算。", intent: null },
-               ] }),
-        camp({ sid: 1872, store: "日本-JP", campaign_id: "225876403499001", name: "JP-手动-精准",
-               marketplace: "JP", currency: "JPY", target_acos: 0.23, breakeven_acos: 0.33,
-               daily_budget: 30, today_spend: 12.4, budget_used_pct: 41.3,
-               ...m(382.3, 1219.7, 45, 714, 47600), acos_vs_target: 0.084, health: "watch" }),
-        camp({ sid: 1863, store: "欧洲-UK", campaign_id: "125876403477033", name: "新品测试-广泛",
-               daily_budget: 8, today_spend: 3.1, budget_used_pct: 38.8,
-               ...m(202.6, 0, 0, 168, 12600), acos_vs_target: null, health: "bad",
-               anomalies: [{ code: "ads.spend_no_sales", severity: "crit", label: "有花费零销售额",
-                             detail: "168 次点击、花了 202.60，一单没出。",
-                             intent: { op_type: "campaign_budget", sid: 1863, target_id: "125876403477033",
-                                       target_name: "新品测试-广泛", cur_value: 8, new_value: 6.8,
-                                       rationale: "168 次点击零转化，先降预算止血" } }] }),
-      ],
-      campaign_count: 4,
-      trend: Array.from({ length: 7 }, (_, i) => ({
-        date: new Date(now - (6 - i) * 86400000).toISOString().slice(0, 10),
-        ...m(160 + i * 9, 600 + i * 22, 22 + i, 330 + i * 12, 20000 + i * 700),
-      })),
-      anomalies: [
-        { code: "ads.spend_no_sales", severity: "crit", label: "有花费零销售额",
-          detail: "168 次点击、花了 202.60，一单没出。", intent: null,
-          sid: 1863, store: "欧洲-UK", campaign_id: "125876403477033", name: "新品测试-广泛" },
-        { code: "ads.acos_breach", severity: "crit", label: "ACOS 破位",
-          detail: "ACOS 71% 已是目标 28% 的 2.5 倍。", intent: null,
-          sid: 1863, store: "欧洲-UK", campaign_id: "125876403477010", name: "露营椅自动-宽泛" },
-        { code: "ads.budget_capped", severity: "info", label: "今日预算见底",
-          detail: "今天已花掉日预算的 98%。", intent: null,
-          sid: 1863, store: "欧洲-UK", campaign_id: "125876403477002", name: "绿植零号手动" },
-      ],
-      errors: [],
-    };
-  })()],
-  ["/cockpit/ads/hourly", {
-    sid: 1863, date: new Date(now).toISOString().slice(0, 10),
-    series: [{ campaign_id: "125876403477002",
-      points: Array.from({ length: 18 }, (_, h) => {
-        const spend = 0.4 + Math.abs(Math.sin(h / 3)) * 1.9;
-        return { hour: h, spend: +spend.toFixed(2), sales: +(spend * 3.8).toFixed(2),
-                 clicks: 3 + (h % 5), impressions: 120 + h * 14, orders: h % 3,
-                 acos: 0.26, cpc: 0.52,
-                 spend_cumulative: +(Array.from({ length: h + 1 },
-                   (_, k) => 0.4 + Math.abs(Math.sin(k / 3)) * 1.9)
-                   .reduce((a, b) => a + b, 0)).toFixed(2) };
-      }), spend_total: 19.5 }],
-    truncated: false, max_campaigns: 12, errors: [],
-  }],
-  ["/cockpit/status", {
-    lingxing_enabled: true, operate_active: false,
-    fast_lane: { enabled: true, max_pct: 15, require_human: true },
-    sync: { enabled: true, interval_minutes: 30, days: 7,
-            last_started_at: ago(0.4), last_finished_at: ago(0.3),
-            age_minutes: 18, last_result: { ok: true, seconds: 41.2 }, running: false },
-    op_types: [{ key: "campaign_budget", label: "广告活动·预算/启停", category: "modify" }],
-  }],
-  // 领星配置页。**必须给 openapi_configured / master_enabled 都填 true** ——
-  // 两者任一为假，LingXing 会直接落到"未启用"的空态，④ 驾驶舱预热那张卡就渲染不到。
-  ["/lingxing/status", {
-    master_enabled: true, operate_active: false, openapi_configured: true,
-    ticket_counts: { awaiting_human: 2, reviewing: 1, executing: 0 },
-  }],
-  ["/lingxing/read/sellers", { rows: [
-    { sid: 101, name: "Ivyea-US", marketplace: "US", currency: "USD", has_ads_setting: 1 },
-    { sid: 102, name: "Ivyea-UK", marketplace: "UK", currency: "GBP", has_ads_setting: 1 },
-    { sid: 103, name: "Ivyea-DE", marketplace: "DE", currency: "EUR", has_ads_setting: 0 },
-  ], count: 3, cached: false, synced_at: new Date(now).toISOString() }],
-  ["/lingxing/datasets", { datasets: [
-    { key: "sellers", label: "店铺列表", group: "基础", params: [], columns: [
-      { key: "sid", label: "SID" }, { key: "name", label: "店铺" },
-      { key: "marketplace", label: "站点" }, { key: "currency", label: "币种" }] },
-    { key: "sp_campaigns", label: "SP 广告活动", group: "广告", params: [
-      { name: "sid", type: "int", required: true, label: "店铺SID" },
-      { name: "length", type: "int", default: 200, label: "条数" },
-      { name: "offset", type: "int", default: 0, label: "偏移" }], columns: [
-      { key: "campaign_id", label: "活动ID" }, { key: "name", label: "活动名" },
-      { key: "daily_budget", label: "日预算" }, { key: "state", label: "状态" }] },
-  ] }],
-  ["/lingxing/review/providers", {
-    available: [
-      { id: "ivyea-agent", label: "IvyeaAgent（内置）", ok: true },
-      { id: "deepseek", label: "DeepSeek", ok: true },
-      { id: "assistant", label: "全局兜底大模型", ok: true },
-      { id: "hermes", label: "Hermes CLI", ok: false },
-    ],
-    personas: ["保守派", "增长派", "魔鬼代言人"],
-    review_providers: "ivyea-agent,deepseek,assistant",
-    analysis_provider: "ivyea-agent",
-    rules_doc: "# 广告优化方法论\n\n- 数据不够不动手\n- 否词：≥15 次点击且 0 单\n",
-    rules_doc_default: "# 广告优化方法论（默认）\n",
-  }],
-  ["/home/category-result", null],
-  ["/home/category", []],
-  ["/home/pulse", []],
   ["/auth/admin/users", [
     { id: 1, email: "admin@ivyea.com", role: "admin", status: "active",
       created_at: 1779000000, approved_at: 1779000000, position: "运营负责人",
-      permissions: ["dashboard", "market", "playbook", "listing", "lingxing"] },
+      permissions: ["dashboard", "market", "playbook", "listing"] },
     { id: 2, email: "operator-zhang@ivyea.com", role: "user", status: "active",
       created_at: 1779500000, approved_at: 1779600000, position: "广告优化师",
-      permissions: ["lingxing", "market"] },
+      permissions: ["market"] },
     { id: 3, email: "newcomer@ivyea.com", role: "user", status: "pending",
       created_at: 1780400000, approved_at: null, position: "", permissions: [] },
     { id: 4, email: "left-the-company@ivyea.com", role: "user", status: "suspended",
@@ -453,12 +212,11 @@ const ROUTES: Array<[string, Canned | ((url: string) => Canned)]> = [
       { key: "market", label: "市场调研", sensitive: false },
       { key: "playbook", label: "打法推荐", sensitive: false },
       { key: "listing", label: "Listing 工作台", sensitive: false },
-      { key: "lingxing", label: "领星广告", sensitive: true },
       { key: "hub-settings", label: "系统配置", sensitive: true },
     ],
     positions: {
-      "运营负责人": ["dashboard", "market", "playbook", "listing", "lingxing"],
-      "广告优化师": ["lingxing", "market"],
+      "运营负责人": ["dashboard", "market", "playbook", "listing"],
+      "广告优化师": ["market"],
       "选品": ["market"],
     },
   }],
@@ -528,7 +286,6 @@ const ROUTES: Array<[string, Canned | ((url: string) => Canned)]> = [
     agent_available: true,
     workspaces: [
       { name: "默认工作区", path: "/root", builtin: true, count: 189 },
-      { name: "Amazon", path: "/root/amazon-image-workflow", builtin: false, count: 0 },
     ],
     total: 189, offset: 0, has_more: true,
   }],
@@ -542,7 +299,6 @@ const ROUTES: Array<[string, Canned | ((url: string) => Canned)]> = [
   ["/agents/browse-filesystem", {
     path: "/root", parent: "/",
     suggestions: [
-      { path: "/root/amazon-image-workflow", name: "amazon-image-workflow", type: "directory" },
       { path: "/root/backups", name: "backups", type: "directory" },
       { path: "/root/brain", name: "brain", type: "directory" },
       { path: "/root/claudecodeui", name: "claudecodeui", type: "directory" },
@@ -615,28 +371,28 @@ const ROUTES: Array<[string, Canned | ((url: string) => Canned)]> = [
   // **categories 不能漏** —— 少一个字段就是整页白屏（SkillTools 直接 Object.entries 它）。
   ["/skill-tools/list", {
     tools: [
-      { name: "amazon/search-term", category: "amazon", description: "Search term report analysis",
-        description_zh: "搜索词报表分析", icon: "⚡", pinned: false, has_execution: true,
-        inputs: [{ name: "asin", label: "ASIN", required: true }],
+      { name: "custom/report-summary", category: "custom", description: "Report summary",
+        description_zh: "报告摘要", icon: "⚡", pinned: false, has_execution: true,
+        inputs: [{ name: "report", label: "Report", required: true }],
         kind: "report", runtime: "llm-only", output_format: "markdown",
         exportable: true, sample_params: {} },
-      { name: "amazon/market-research", category: "amazon", description: "Market research",
+      { name: "custom/source-review", category: "custom", description: "Market research",
         description_zh: "市场调研", icon: "◎", pinned: false, has_execution: true,
         inputs: [], kind: "report", runtime: "llm-only", output_format: "markdown",
         exportable: false, sample_params: {} },
     ],
-    categories: { amazon: 2 },
+    categories: { custom: 2 },
   }],
   ["/skill-tools/runs", { runs: [] }],
   ["/skill/stats", { total_skills: 98, total_size_bytes: 1048576,
-                     categories: { amazon: 5, research: 12 }, recently_edited: [] }],
-  ["/skill/agent-sync", { domains: ["amazon"], roots: ["/root/ivyea-ops/data/skills/amazon"],
+                     categories: { custom: 5, research: 12 }, recently_edited: [] }],
+  ["/skill/agent-sync", { domains: ["emag"], roots: ["/demo/skills/emag"],
                           registered: true, count: 5 }],
   // 字段名照抄 server/app/services/skill_repo.py 的 SkillMeta。
   // updated_at 漏了的话界面上是「Invalid Date」—— 猜字段名就是这么露馅的。
   ["/skill/list", { skills: [
-    { name: "amazon/ad_negative_guard", category: "amazon", description: "Negative keyword guard",
-      description_zh: "否词护栏：低效搜索词批量加否", pinned: false, editable: true,
+    { name: "custom/evidence-review", category: "custom", description: "Evidence review",
+      description_zh: "证据复核清单", pinned: false, editable: true,
       source: "user", updated_at: ago(6), size_bytes: 4096, file_count: 3 },
     { name: "custom/weekly_review", category: "custom", description: "Weekly account review",
       description_zh: "账户周检清单", pinned: false, editable: true,
@@ -834,17 +590,7 @@ const ROUTES: Array<[string, Canned | ((url: string) => Canned)]> = [
       alert_chat_id: "oc_demo7a0933a4af7e82980367a", alert_feishu_domain: "feishu",
       alert_webhook: "", alert_threshold: 80, alert_sustain: 5, alert_cooldown: 30,
       // 领星：凭证已配（secret 非空 = 界面显示"已配置，留空不改"）
-      lingxing_openapi_host: "https://openapi.lingxing.com",
-      lingxing_openapi_appid: "ak_demo_12345", lingxing_openapi_secret: "••••",
-      lingxing_mcp_key: "", lingxing_enabled: true,
-      lingxing_operate_require_human: true,
-      lingxing_fast_lane_enabled: true, lingxing_fast_lane_max_pct: 15,
-      lingxing_target_acos_factor: 0.7, lingxing_max_change_pct: 20,
-      lingxing_bid_step_pct: 15, lingxing_neg_min_clicks: 15,
-      lingxing_cooldown_days: 7, lingxing_opt_window_days: 30,
-      lingxing_scope_stores: "", lingxing_custom_models: "[]",
       // 驾驶舱预热：开着，且 /cockpit/status 的 sync 段与这里一致
-      cockpit_sync_enabled: true, cockpit_sync_minutes: 30, cockpit_sync_days: 7,
     },
     secret_keys: ["apimart_key", "ivyea_agent_api_key", "vision_api_key", "alert_app_secret",
                   "alert_webhook"],
@@ -931,25 +677,6 @@ const ROUTES: Array<[string, Canned | ((url: string) => Canned)]> = [
     result: { asin: "B0DEMO1234", title: "Demo Widget", price: 19.99, bsr: 1234,
               rating: 4.5, review_count: 88, data_source: "custom:myerp", error: null },
   }],
-  ["/settings/amazon", () => ({
-    ok: true, configured: true, ads_configured: false, ads_uses_own_app: false,
-    region: "eu", spapi_host: "https://sellingpartnerapi-eu.amazon.com",
-    ads_host: "https://advertising-api-eu.amazon.com",
-    seller_id: "A23SU2M9XL8R0O",
-    marketplaces: [
-      { sid: "1863", marketplace_id: "A1F83G8C2ARO7P", name: "欧洲-UK",
-        country: "UK", region: "eu", ads_profile_id: "3344556677" },
-      { sid: "1864", marketplace_id: "APJ6JRA9NG5V4", name: "欧洲-IT",
-        country: "IT", region: "eu", ads_profile_id: "" },
-    ],
-    marketplace_count: 2, with_ads_profile: 1,
-    catalog: [
-      { marketplace_id: "ATVPDKIKX0DER", country: "US", region: "na" },
-      { marketplace_id: "A1F83G8C2ARO7P", country: "UK", region: "eu" },
-      { marketplace_id: "APJ6JRA9NG5V4", country: "IT", region: "eu" },
-      { marketplace_id: "A1VC38T7YXB528", country: "JP", region: "fe" },
-    ],
-  })],
   // 飞书配置向导。**故意给一个"配了一半"的状态**：全绿的话，未完成步骤和
   // 能力矩阵里的 blockers 那两条分支根本渲染不到，等于没验。
   ["/settings/feishu", () => ({
@@ -1031,30 +758,6 @@ const ROUTES: Array<[string, Canned | ((url: string) => Canned)]> = [
   ["/ivyea-agent/skills", { ok: true, skills: [] }],
   ["/ivyea-agent/ops-tools", { ok: true, tools: [] }],
   ["/skill-tools/pinned", []],
-  // ── Listing 工作台 ──────────────────────────────────────────────────────
-  // 键是 "/listing/..."（见 reply()：按 baseURL+url 匹配）。
-  // 这里只铺到"能打开视觉步骤并看到一份方案"为止——目的就是验降级横幅这类
-  // 只在特定状态下才出现的界面，它们此前在验证台里根本渲染不出来。
-  ["/listing/projects/p-demo/reference-images", { uploaded: [], scraped: [] }],
-  ["/listing/projects/p-demo/jobs", { active: null, jobs: [] }],
-  ["/listing/projects/p-demo", () => ({
-    id: "p-demo", asin: "B0DEMO0001", marketplace: "US", status: "planned",
-    title: "便携旅行收纳箱", created_at: Date.now() / 1000, updated_at: Date.now() / 1000,
-    // 采集只拿到 1 张白底图 + 本机没浏览器 —— 这正是 ProductStep 那条兜底提示的
-    // 触发条件（Docker 按钮拆掉后，这里要能验出取代它的是重试 + 浏览器提示）。
-    scrape_data: JSON.stringify({
-      title: "便携旅行收纳箱", bullets: ["硬壳防摔", "可扩容 8L"], images: [],
-      reference_images: ["/art/bg.png"], scrape_source: "sorftime",
-      full_images_available: false, browser_available: false,
-    }),
-    analysis_data: null, copy_result: null, copy_job_id: null,
-    creative_sets: JSON.stringify({ gallery: DEMO_PLAN }),
-  })],
-  ["/listing/projects", [{
-    id: "p-demo", asin: "B0DEMO0001", marketplace: "US", status: "planned",
-    title: "便携旅行收纳箱", created_at: Date.now() / 1000, updated_at: Date.now() / 1000,
-    active_jobs: [],
-  }]],
   // 「系统状态与更多设置」折叠区里的通知与 MCP 两块。缺了它们整棵子树会在
   // Object.entries(undefined) / tokens.length 上炸掉——而系统状态卡就在同一棵
   // 子树里，于是根本验不到。这是 harness 的坑，不是产品的。
@@ -1088,11 +791,6 @@ const ROUTES: Array<[string, Canned | ((url: string) => Canned)]> = [
   // **名字必须掺进真实的长条目**：手机端窄栏里"长到放不下的标题/路径"才是会撑破
   // 布局的那一类，清一色四个字的短名字什么都验不出来。
   ["/brain/files", { root: "~/brain", total: 5, files: [
-    { path: "amazon/ads/negative.md", name: "否词护栏", category: "ads", size: 2048, mtime: 1755300000, summary: "低效搜索词批量否定" },
-    { path: "amazon/ads/sp-structure-cold-start-playbook.md", name: "SP 广告投放结构与冷启动打法（美国站 2026 版）", category: "ads", size: 8192, mtime: 1755301000, summary: "冷启动分阶段预算与竞价" },
-    { path: "amazon/listing/main-image.md", name: "主图合规", category: "listing", size: 1024, mtime: 1755310000, summary: "主图白底与占比要求" },
-    { path: "amazon/policy/vat.md", name: "VAT 税务", category: "policy", size: 4096, mtime: 1755320000, summary: "欧洲站 VAT 申报" },
-    { path: "amazon/policy/eu-vat-jct-registration-and-filing-checklist.md", name: "欧盟 VAT / 日本 JCT 注册与申报核对清单", category: "policy", size: 6144, mtime: 1755321000, summary: "跨站点税务注册与申报" },
   ] }],
   ["/brain/uploads", { uploads: [] }],
   ["/brain/chat/status", { configured: true, provider: "ivyea-agent", model: "deepseek-v4-pro" }],
@@ -1531,7 +1229,6 @@ const ROUTES: Array<[string, Canned | ((url: string) => Canned)]> = [
   }],
   ["/news/dates", { dates: ["2026-08-17"], latest: "2026-08-17" }],
   ["/news/day", { date: "2026-08-17", items: [], generated_at: "", summary: "" }],
-  ["/deep-analysis/history", { items: [] }],
   ["/help/docs", { docs: [
     { name: "usage", title: "使用手册" },
     { name: "config", title: "配置说明" },
@@ -1554,7 +1251,6 @@ const ROUTES: Array<[string, Canned | ((url: string) => Canned)]> = [
       version: { ok: true, detail: "1.6.1" },
       ivyea_agent: { ok: true, detail: "127.0.0.1:8765" },
       apimart: { ok: false, detail: "未配置" },
-      sorftime: { ok: true, detail: "已配置" },
       ollama: { ok: false, detail: "未安装" },
       brain_root: { ok: true, detail: "~/.ivyea/knowledge" },
       openai: { ok: false, detail: "未配置" },
@@ -1646,14 +1342,6 @@ export function installMockApi(): void {
     } as never;
   };
 
-  // ?lxoff=1 —— 装成"领星还没配"：经营侧两块面板的接口 400，且 /cockpit/status
-  // 里 lingxing_enabled=false。**必须两件事一起装**：LingXingGate 是靠回头问
-  // status 来区分"没配置"和"真故障"的，只让面板报错验到的是另一条分支。
-  const lxOff = new URLSearchParams(location.search).get("lxoff") === "1";
-  // ?lxerr=1 —— 领星配好了，但面板接口真的挂了。验的是反面：这时候**必须**把原始
-  // 错误照实显示，绝不能被 Gate 当成"没配置"藏掉。
-  const lxErr = new URLSearchParams(location.search).get("lxerr") === "1";
-
   let authAttempts = 0;
   let emagApproved=false,agentDecided=false;
   const slowReply = async (config: { url?: string; baseURL?: string;data?:unknown;method?:string;params?:{before_sequence?:number} }) => {
@@ -1661,6 +1349,9 @@ export function installMockApi(): void {
     if (ms) await new Promise((r) => setTimeout(r, ms));
     const full = (config.baseURL || "/api").replace(/^\/api/, "") + (config.url || "");
     ((window as any).__harnessRequests ||= []).push(full);
+    if(full==='/operations/stores/second-ro/overview'&&new URLSearchParams(location.search).get('wbcase')==='multi')await new Promise(resolve=>setTimeout(resolve,400));
+    const platform = platformReply(full, config.method);
+    if (platform !== null) return { ...reply(config), data: platform };
     const statusCase=new URLSearchParams(location.search).get('statuscase');
     if((window as any).__statusListFail&&full==='/emag/stores')throw Object.assign(new Error('Synthetic list unavailable'),{response:{status:503}});
     if(statusCase==='empty'&&full==='/emag/stores')return {...reply(config),data:[]};
@@ -1751,20 +1442,6 @@ export function installMockApi(): void {
     if(full==='/emag/stores'&&emagCase==='empty')return {...reply(config),data:[]};
     if((full==='/emag/stores'&&emagCase==='offline')||(full.endsWith('/job')&&['no-job','job-error'].includes(emagCase||''))){
       throw Object.assign(new Error('Synthetic eMAG fixture error'),{isAxiosError:true,response:{status:emagCase==='no-job'?404:503,data:{detail:'Synthetic fixture'}}});
-    }
-    if (lxOff || lxErr) {
-      if (lxOff && full.startsWith("/cockpit/status")) {
-        const r: any = reply(config);
-        r.data = { ...r.data, lingxing_enabled: false };
-        return r;
-      }
-      if (full.startsWith("/cockpit/ads") || full.startsWith("/cockpit/promotions")) {
-        throw Object.assign(new Error("Request failed with status code 400"), {
-          isAxiosError: true,
-          response: { status: 400, data: {
-            detail: lxOff ? "领星集成未启用（总开关关闭）" : "领星接口超时（504 upstream）" } },
-        });
-      }
     }
     return reply(config);
   };
@@ -1950,7 +1627,6 @@ export function installMockApi(): void {
         for (let n = 1; n <= wantApprovals; n++) {
           await beat(500);
           send("permission_request", {
-            request_id: `req-demo-${n}`, session_id: "s-live", op_type: "lingxing_write",
             title: `把 3 个搜索词加为否定关键词（第 ${n} 批）`, destructive: true,
             preview: "广告活动：Trail Camera - Auto\n否词：cheap camera / free camera / camera app",
             options: [{ key: "approve", label: "批准这一次" },

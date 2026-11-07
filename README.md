@@ -1,4 +1,4 @@
-# ivyeaops
+# store-ops
 
 [简体中文](docs/zh-CN/readme.md)
 
@@ -6,7 +6,9 @@
 
 [Interactive eMAG demo](https://runchengxie.github.io/store-ops/demo/) · Synthetic data; changes reset on refresh.
 
-A self-hosted eMAG RO operations workspace, forked from [Hector-xue/IvyeaOps](https://github.com/Hector-xue/IvyeaOps). The fork uses imported evidence for inspections, business summaries and local drafts. It retains the original platform tools under explicit legacy routes.
+A self-hosted eMAG RO operations workspace, forked from [Hector-xue/IvyeaOps](https://github.com/Hector-xue/IvyeaOps). The fork uses imported evidence for inspections, business summaries and local drafts. It separates shared operations infrastructure from a single enabled eMAG adapter. Amazon execution paths are removed.
+
+See [platform adapter boundaries](docs/platform-adapters.md) for the common contract and upgrade behavior.
 
 ## Current capabilities
 

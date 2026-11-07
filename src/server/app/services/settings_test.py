@@ -98,107 +98,10 @@ async def _probe_apimart_base(url: str) -> Dict[str, Any]:
         return _err(f"无法连接：{e}")
 
 
-async def _probe_sorftime(key: str) -> Dict[str, Any]:
-    if not key:
-        return _err("未填写")
-    # Use MCP tools/list as a low-cost auth check.
-    url = f"https://mcp.sorftime.com?key={key}"
-    payload = {"jsonrpc": "2.0", "id": 1, "method": "tools/list"}
-    try:
-        async with httpx.AsyncClient(timeout=_DEFAULT_TIMEOUT) as c:
-            r = await c.post(url, json=payload, headers={
-                "Content-Type": "application/json",
-                "Accept": "application/json, text/event-stream",
-            })
-        if r.status_code != 200:
-            return _err(f"HTTP {r.status_code}")
-        # Sorftime returns SSE: parse last data line
-        body = None
-        for line in r.text.splitlines():
-            line = line.strip()
-            if line.startswith("data:"):
-                try:
-                    body = json.loads(line[5:].strip())
-                except Exception:
-                    logger.debug("json.loads 失败（旁路，已忽略）", exc_info=True)
-        if body is None:
-            return _err("响应解析失败")
-        if "error" in body:
-            return _err(f"鉴权失败：{body['error']}")
-        tools = body.get("result", {}).get("tools", [])
-        return _ok(f"密钥有效（{len(tools)} 个工具可用）")
-    except Exception as e:
-        return _err(str(e)[:200])
 
 
-async def _probe_sif(key: str) -> Dict[str, Any]:
-    if not key:
-        return _err("未填写")
-    try:
-        payload = {"jsonrpc": "2.0", "id": 1, "method": "tools/list"}
-        async with httpx.AsyncClient(timeout=_DEFAULT_TIMEOUT) as c:
-            r = await c.post("https://mcp.sif.com/mcp", json=payload, headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {key}",
-                "Accept": "application/json, text/event-stream",
-            })
-        if r.status_code == 401:
-            return _err("密钥无效")
-        if r.status_code != 200:
-            return _err(f"HTTP {r.status_code}")
-        body = None
-        for line in r.text.splitlines():
-            line = line.strip()
-            if line.startswith("data:"):
-                try:
-                    body = json.loads(line[5:].strip())
-                except Exception:
-                    logger.debug("json.loads 失败（旁路，已忽略）", exc_info=True)
-        if body is None:
-            try:
-                body = r.json()
-            except Exception:
-                return _err("响应解析失败")
-        if "error" in body:
-            return _err(f"鉴权失败：{body['error']}")
-        tools = body.get("result", {}).get("tools", [])
-        return _ok(f"SIF 密钥有效（{len(tools)} 个工具）")
-    except Exception as e:
-        return _err(str(e)[:200])
 
 
-async def _probe_sellersprite(key: str) -> Dict[str, Any]:
-    if not key:
-        return _err("未填写")
-    # SellerSprite's open platform is an MCP server (not REST) — connect the same
-    # way the data pipeline does (mcp.sellersprite.com/mcp?secret-key=...), and
-    # confirm tools/list answers. (The REST endpoint returns HTTP 200 even when
-    # unauthorized, so checking the MCP is both correct and matches real usage.)
-    from app.services.sellersprite_service import parse_sse
-    url = f"https://mcp.sellersprite.com/mcp?secret-key={key}"
-    headers = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream"}
-    try:
-        async with httpx.AsyncClient(timeout=_DEFAULT_TIMEOUT) as c:
-            await c.post(url, headers=headers, json={
-                "jsonrpc": "2.0", "id": 0, "method": "initialize",
-                "params": {"protocolVersion": "2024-11-05", "capabilities": {},
-                           "clientInfo": {"name": "IvyeaOps", "version": "1.0"}}})
-            r = await c.post(url, headers=headers,
-                             json={"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}})
-        body = parse_sse(r.text)
-        tools = (body.get("result") or {}).get("tools") or []
-        names = [t.get("name") for t in tools if isinstance(t, dict)]
-        # An invalid key still answers tools/list — but with a single
-        # `secret_invalid`("密钥不合法") tool instead of the real toolset.
-        if "secret_invalid" in names:
-            return _err("密钥不合法（卖家精灵 MCP 拒绝该 key）")
-        if tools:
-            return _ok(f"MCP 已连接（{len(tools)} 个工具可用）")
-        if body.get("error"):
-            return _err(f"MCP 错误：{str(body['error'])[:150]}")
-        return _err("MCP 未返回工具，请检查 key 或开通的接口权限")
-    except Exception as e:  # noqa: BLE001
-        return _err(str(e)[:200])
 
 
 async def _probe_openai(key: str) -> Dict[str, Any]:
@@ -473,12 +376,6 @@ async def test_value(key: str, value: Optional[str]) -> Dict[str, Any]:
         return await _probe_apimart(val)
     if key == "apimart_base":
         return await _probe_apimart_base(val)
-    if key == "sorftime_key":
-        return await _probe_sorftime(val)
-    if key == "sif_key":
-        return await _probe_sif(val)
-    if key == "sellersprite_key":
-        return await _probe_sellersprite(val)
     if key == "openai_api_key":
         return await _probe_openai(val)
     if key in ("ivyea_agent_url", "ivyea_agent_token"):
@@ -535,9 +432,6 @@ _SELF_CHECK_KEYS = [
     ("ivyea_agent_url", "IvyeaAgent 本地服务"),
     ("vision_ai_providers", "视觉 provider 链"),
     ("openai_api_key", "OpenAI 视觉 Key"),
-    ("sorftime_key", "Sorftime Key"),
-    ("sif_key", "SIF Key"),
-    ("sellersprite_key", "卖家精灵 Key"),
     ("alert_webhook", "告警 Webhook"),
 ]
 
