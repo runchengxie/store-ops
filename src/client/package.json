@@ -32,7 +32,8 @@
     "test:reliability": "node --test e2e/upstream-reliability.test.mjs",
     "test:render": "node --test e2e/render-contract.test.mjs",
     "test:emag-playbooks": "node --test e2e/emag-playbooks.test.mjs",
-    "test:emag-research": "node --test e2e/emag-research.test.mjs"
+    "test:emag-research": "node --test e2e/emag-research.test.mjs",
+    "test:store-status": "node --test e2e/store-status.test.mjs"
   },
   "dependencies": {
     "@codemirror/commands": "^6.10.3",

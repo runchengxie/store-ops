@@ -193,7 +193,7 @@ jobs:
         run: npm run test:workbench
       - name: eMAG playbook contracts
         working-directory: src/client
-        run: npm run test:emag-playbooks && npm run test:emag-research
+        run: npm run test:emag-playbooks && npm run test:emag-research && npm run test:store-status
       - name: Upstream reliability regressions
         working-directory: src/client
         run: npm run test:reliability

@@ -1661,6 +1661,11 @@ export function installMockApi(): void {
     if (ms) await new Promise((r) => setTimeout(r, ms));
     const full = (config.baseURL || "/api").replace(/^\/api/, "") + (config.url || "");
     ((window as any).__harnessRequests ||= []).push(full);
+    const statusCase=new URLSearchParams(location.search).get('statuscase');
+    if(statusCase==='empty'&&full==='/emag/stores')return {...reply(config),data:[]};
+    if(statusCase==='offline'&&full.endsWith('/workspace'))throw Object.assign(new Error('Synthetic unavailable'),{response:{status:503}});
+    if(statusCase&&full==='/emag/stores/demo-ro/workspace')return {...reply(config),data:{...(reply(config).data as any),captured_at:new Date(Date.now()-60000).toISOString()}};
+    if(statusCase&&full.endsWith('/job'))return {...reply(config),data:{store_id:'demo-ro',status:statusCase==='failed'?'failed':['active','old-running'].includes(statusCase)?'running':'complete',stage:'collection',started_at:new Date(Date.now()-(statusCase==='old-running'?3600000:10000)).toISOString()}};
     const research=researchReply(full,config.method,config.data,new URLSearchParams(location.search).get('researchcase'));
     if(research)return {...reply(config),data:research};
     if(full.endsWith('/scenario')&&full.includes('/commerce/'))return {...reply(config),data:{economics:{contribution_ron:'38.00',contribution_margin_pct:'38.00',break_even_ex_vat_ron:'56.82',target_sale_ex_vat_ron:'73.53',target_status:'calculated'},marketplace_writes:false}};

@@ -18,6 +18,7 @@ git log 记得住「改了什么」，记不住「为什么不选另一条路」
 
 | 编号 | 决策 | 日期 |
 |---|---|---|
+| 0056 | [Novice status home](0056-novice-status-home.md) | 2026-11-08 |
 | 0055 | [Market research ledger](0055-market-research-ledger.md) | 2026-11-08 |
 | [0054](./0054-source-linked-emag-playbooks.md) | Source-linked local eMAG playbooks | 2026-11-07 |
 | [0053](./0053-compact-store-workbench.md) | Compact store workbench and scoped conversation | 2026-11-04 |

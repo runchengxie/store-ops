@@ -7,8 +7,7 @@ import EmagOperations from '../src/pages/workbench/EmagOperations';
 import EmagWorkspace from '../src/pages/workbench/EmagWorkspace';
 import { createDemoState } from './state.mjs';
 import './style.css';
-import SimpleWorkbench from '../src/pages/workbench/SimpleWorkbench';
-import DemoWorkbenchChat from './DemoWorkbenchChat';
+import StatusWorkbench from '../src/pages/workbench/status/StatusWorkbench';
 
 const state = createDemoState();
 api.defaults.adapter = async config => {
@@ -33,7 +32,7 @@ function DemoShell() {
   const location = useLocation();
   const compact = location.pathname === "/workbench";
   return <>
-    <div style={{ display: compact ? "contents" : "none" }}><SimpleWorkbench demo ChatComponent={DemoWorkbenchChat} /></div>
+    {compact&&<StatusWorkbench demo />}
     {!compact && <>
     <div className="demo-layout">
       <Link className="demo-return" to="/workbench">← 返回店铺工作台</Link>

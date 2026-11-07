@@ -35,7 +35,7 @@ jobs:
           cache-dependency-path: src/client/package-lock.json
       - run: npm ci
         working-directory: src/client
-      - run: npm run test:demo && npm run test:workbench && npm run test:emag-playbooks && npm run test:emag-research && npm run test:emag-dashboard && npm run test:emag-issues && npm run typecheck:demo && npm run build:demo
+      - run: npm run test:demo && npm run test:workbench && npm run test:emag-playbooks && npm run test:emag-research && npm run test:store-status && npm run test:emag-dashboard && npm run test:emag-issues && npm run typecheck:demo && npm run build:demo
         working-directory: src/client
       - run: python -m pip install -r scripts/requirements-docs.txt
       - run: python scripts/build-docs-site.py --output _site --demo-dir src/client/dist-demo

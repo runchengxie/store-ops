@@ -8,6 +8,9 @@
 
 ## 2026-11-08
 
+- Replace the public demo and authenticated landing with a novice-friendly bilingual status home: one clear status, three evidence figures, subtle motion and a pausable carousel. Chat and detail tools remain secondary; actual task/evidence freshness controls production states.
+
+
 - Add a bilingual local opportunity/competitor ledger, atomic CSV import, exact-PNK matching, revision history and comparable historical quote changes. Extend profitability with contribution margin, break-even/target prices and snapshot-bound read-only sale-price scenarios. No marketplace writes or automatic external market feed.
 
 ## 2026-11-07

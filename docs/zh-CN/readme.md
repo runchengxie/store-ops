@@ -53,3 +53,5 @@ Linux/macOS 使用 `bash scripts/manage.sh install` 和 `bash scripts/manage.sh 
 许可为 [AGPL-3.0](../license)，保留上游归属和许可义务。
 
 - [市场调研与盈利情景](emag-market-research.md)
+
+- [店铺状态首页](store-status-home.md)
