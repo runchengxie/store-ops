@@ -199,7 +199,7 @@ export default function SkillMarket() {
       <div style={{ padding: "18px 4px", maxWidth: 640 }}>
         <h3 style={{ marginTop: 0 }}>社区市场未开启</h3>
         <p style={{ fontSize: "var(--fs-14)", lineHeight: 1.75, color: "var(--t)" }}>
-          能力市场会向门道社区发起请求，而 ivyeaops 的默认立场是<b>数据不出你的机器</b>，
+          能力市场会向门道社区发起请求，而 store-ops 的默认立场是<b>数据不出你的机器</b>，
           所以它默认关着。
         </p>
         <p style={{ fontSize: "var(--fs-14)", lineHeight: 1.75, color: "var(--t)" }}>

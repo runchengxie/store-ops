@@ -176,7 +176,7 @@ export default function SubscriptionLogin() {
           措辞别写"服务器"：大量用户就是把 IvyeaOps 装在自己的 Windows 电脑上，
           "服务器"会让他们以为凭据被传去了别处。 */}
       <div className="sl-warn">
-        这里登录的账号存在<b>运行 ivyeaops 的这台机器上</b>、由 IvyeaAgent 全局共用：所有用户的对话和所有定时任务
+        这里登录的账号存在<b>运行 store-ops 的这台机器上</b>、由 IvyeaAgent 全局共用：所有用户的对话和所有定时任务
         都会用它的额度。另外，各家订阅的条款通常是限个人使用的，接进多人共用的工作台是否合规，
         请自行判断。
       </div>

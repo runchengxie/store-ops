@@ -485,9 +485,9 @@ export default function MainLayout() {
           : (railCollapsed ? undefined : { width: sbWidth, minWidth: sbWidth })}
       >
         <div className="sb-logo">
-          <div className="sb-logo-name" title="ivyeaops">
+          <div className="sb-logo-name" title="store-ops">
             <img src="/ivyea-logo.png" alt="" className="sb-logo-img" />
-            <span className="sb-logo-text">ivyeaops</span>
+            <span className="sb-logo-text">store-ops</span>
           </div>
           <button
             className="sb-toggle"

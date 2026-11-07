@@ -26,3 +26,7 @@ The published demo starts on the same shared status presentation. Its visible de
 ## Existing deployments
 
 Update the identified existing service from merged source and build/copy its matching frontend. Preserve its environment, credentials, data paths, scheduled tasks and marketplace-write gates. A separate empty test installation is not a replacement for the real runtime. Restart only the identified service and verify its authentication and original store records after updating. Keep machine paths and diagnostic records in private deployment/data locations, not this repository.
+
+## Naming compatibility
+
+Visible product branding uses `store-ops`. Existing `IVYEA_OPS_*` configuration keys, credential target `IvyeaOps/eMAG/RO`, internal module names, API/tool identifiers and existing scheduled-task/data names remain compatible. A repository rename is not a data or credential migration. Upstream license notices and actual release references retain their original names. Replace those contracts only through a separate versioned migration, not a global search-and-replace.

@@ -260,9 +260,9 @@ function AgentRow({
 function StepWelcome({ onNext }: { onNext: () => void }) {
   return (
     <>
-      <div style={S.title}>欢迎使用 ivyeaops</div>
+      <div style={S.title}>欢迎使用 store-ops</div>
       <div style={S.sub}>
-        ivyeaops 是一个自托管的运营工作台，集成了 AI Agent、市场调研、广告审计、
+        store-ops 是一个自托管的运营工作台，集成了 AI Agent、市场调研、广告审计、
         Listing 生成、知识库等功能。<br /><br />
         这个向导将帮你完成初始配置，只需 2 分钟。
       </div>
@@ -319,7 +319,7 @@ function StepAgents({
     {
       name: "ivyea-agent",
       label: "IvyeaAgent（默认 · Agent + 知识库 + 本地检索）",
-      hint: "安装到 ivyeaops 的 server/.venv；这是新部署的默认 AI 主链。",
+      hint: "安装到 store-ops 的 server/.venv；这是新部署的默认 AI 主链。",
     },
     {
       name: "codex",
@@ -338,7 +338,7 @@ function StepAgents({
       <div style={S.title}>IvyeaAgent 检测</div>
       <div style={S.sub}>
         新版本默认使用内置 IvyeaAgent 驱动对话、知识库和本地检索。Codex / Claude
-        仍可作为代码任务增强项安装，但不再是部署 ivyeaops 的必要条件。
+        仍可作为代码任务增强项安装，但不再是部署 store-ops 的必要条件。
       </div>
       {agents.map((a) => (
         <AgentRow
@@ -751,7 +751,7 @@ function StepDone({ onFinish }: { onFinish: () => void }) {
         <div style={{ fontSize: 40, marginBottom: 16 }}>✓</div>
         <div style={{ ...S.title, textAlign: "center" }}>配置完成</div>
         <div style={{ ...S.sub, textAlign: "center" }}>
-          ivyeaops 已就绪。随时可以在「系统配置」页修改或补充任何设置。
+          store-ops 已就绪。随时可以在「系统配置」页修改或补充任何设置。
         </div>
         <div
           style={{

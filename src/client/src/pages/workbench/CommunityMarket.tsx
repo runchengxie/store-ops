@@ -93,7 +93,7 @@ export default function CommunityMarket({ embedded = false }: { embedded?: boole
         <div className="mk-empty">
           <b>门道社区市场还没开启</b>
           <p>
-            它会向门道社区发起请求，而 ivyeaops 的默认立场是<b>数据不出你的机器</b>，
+            它会向门道社区发起请求，而 store-ops 的默认立场是<b>数据不出你的机器</b>，
             所以不替你打开。开启后也只在你主动浏览或安装时联网 —— 请求匿名、
             不带机器标识、不回传任何使用统计。
           </p>
@@ -123,9 +123,9 @@ export default function CommunityMarket({ embedded = false }: { embedded?: boole
           说清楚边界，比让人以为「上架 = 已审核」安全得多。 */}
       <div className="mk-disclaimer">
         <b>免责声明</b>：这里的技能由社区成员上传，<b>未经官方审计</b>。安装前
-        ivyeaops 会在本地做静态检查（提示词注入、索取凭据、危险模块调用）并把能力清单
+        store-ops 会在本地做静态检查（提示词注入、索取凭据、危险模块调用）并把能力清单
         摆给你看，但<b>这不等于安全保证</b>。请自行评估后使用；因使用市场内容造成的
-        损失，门道与 ivyeaops 不承担责任。
+        损失，门道与 store-ops 不承担责任。
       </div>
 
       {err && <div className="mk-err">{err}</div>}

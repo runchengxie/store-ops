@@ -203,7 +203,7 @@ export default function Market() {
         // failures as the unhelpful "TypeError: network error". Translate
         // that to something the user can act on.
         const friendly = /network error|Failed to fetch|TypeError/i.test(raw)
-          ? "与服务器的连接中断。常见原因：(1) AI 合成耗时过长被反代掐断；(2) Apimart 密钥失效后回退到 CLI 但 CLI 无响应；(3) 服务端 502/503。请到「系统配置 → AI 服务」点「测试密钥」验证 Apimart key，或检查 ivyeaops 服务日志。"
+          ? "与服务器的连接中断。常见原因：(1) AI 合成耗时过长被反代掐断；(2) Apimart 密钥失效后回退到 CLI 但 CLI 无响应；(3) 服务端 502/503。请到「系统配置 → AI 服务」点「测试密钥」验证 Apimart key，或检查 store-ops 服务日志。"
           : raw;
         setErrorMsg(friendly);
         setPhase("error");

@@ -17,7 +17,7 @@ import type { TourStep } from "../components/Tour";
 // 两个键都指向同一份步骤，老的 "已看过" 记录也就继续有效。
 const DASHBOARD_TOUR: TourStep[] = [
   {
-    title: "欢迎使用 ivyeaops 👋",
+    title: "欢迎使用 store-ops 👋",
     body: "一台机器、一次登录，把亚马逊运营全流程收进浏览器。\n这个快速引导带你认识控制台。3 步就能开始用：\n① 配一个 AI 模型  ② 配数据源  ③ 去任意板块开干。",
   },
   { sel: '[data-tour="sidebar"]', title: "左侧 = 所有板块入口", body: "「任务台」是一句话把活派给 Agent 的地方；现有板块都收在「更多工具」里，按原来的分组排列。左下角按钮可折叠侧边栏。" },

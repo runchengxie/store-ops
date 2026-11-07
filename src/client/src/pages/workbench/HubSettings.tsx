@@ -1024,12 +1024,12 @@ function AgentUpdateRow() {
           ? "（暂时无法连 GitHub 检查最新版，可能网络问题，稍后再试）。"
           : hasUpd
             ? (frozen
-                ? "，有新版：内置版本随 ivyeaops 一起更新，请点左下角「更新」升级。"
+                ? "，有新版：内置版本随 store-ops 一起更新，请点左下角「更新」升级。"
                 : "，点「检查并更新」升级。")
             : "（已是最新）。"}
         {/* 上面那句已经把"随 IvyeaOps 更新"说清楚了，就别再缀一遍 —— 这张卡只有
             180px 宽，重复一句就是多占三四行。只有没提到它的时候才补这个尾巴。 */}
-        {frozen && !hasUpd && <>{" "}<span style={{ color: "var(--t3)" }}>（内置版本，随 ivyeaops 更新）</span></>}
+        {frozen && !hasUpd && <>{" "}<span style={{ color: "var(--t3)" }}>（内置版本，随 store-ops 更新）</span></>}
       </div>
       {busy && (
         <div style={{ margin: "8px 0" }}>
@@ -1882,7 +1882,7 @@ function McpSection() {
     mcpServers: {
       "ivyea-ops": {
         type: "http",
-        url: endpoint || "http://<你的 ivyeaops 地址>/api/mcp",
+        url: endpoint || "http://<你的 store-ops 地址>/api/mcp",
         headers: { Authorization: `Bearer ${fresh?.token || "<粘贴你的令牌>"}` },
       },
     },
@@ -2116,7 +2116,7 @@ function AppearanceSection() {
           <div className="hs-agent-card" style={{ gridColumn: "1 / -1" }}>
             <div className="hs-agent-card-title">预览</div>
             <div style={{ marginTop: 6, fontSize: "var(--fs-14)", lineHeight: 1.8, color: "var(--t)" }}>
-              ivyeaops 广告优化 · Listing 诊断 · 知识库检索 — The quick brown fox 0123456789
+              store-ops 广告优化 · Listing 诊断 · 知识库检索 — The quick brown fox 0123456789
             </div>
           </div>
         </div>
@@ -2235,7 +2235,7 @@ export default function HubSettings({ focusSection = "" }: { focusSection?: stri
       {/* -- 核心 1: IvyeaAgent -- */}
       <Section
         title="IvyeaAgent"
-        desc={<>系统主智能体。右下角 Agent 对话、知识库推理，以及通过对话操作 ivyeaops 各板块，都优先走这里。</>}
+        desc={<>系统主智能体。右下角 Agent 对话、知识库推理，以及通过对话操作 store-ops 各板块，都优先走这里。</>}
         keys={[
           "ivyea_agent_url", "ivyea_agent_token", "ivyea_agent_auto_start",
           "ivyea_agent_provider", "ivyea_agent_model", "ivyea_agent_api_key", "ivyea_agent_base_url",
@@ -2256,7 +2256,7 @@ export default function HubSettings({ focusSection = "" }: { focusSection?: stri
 
           <div className="hs-agent-card">
             <div className="hs-agent-card-title"><Tag kind="rec">推荐</Tag>运行方式</div>
-            <div className="hs-agent-card-desc">服务未启动时，ivyeaops 自动拉起本机 IvyeaAgent。</div>
+            <div className="hs-agent-card-desc">服务未启动时，store-ops 自动拉起本机 IvyeaAgent。</div>
             <label className="hs-toggle-line">
               <input type="checkbox" checked={!!vals.ivyea_agent_auto_start}
                 onChange={e => set("ivyea_agent_auto_start", e.target.checked)} />
@@ -2521,7 +2521,7 @@ export default function HubSettings({ focusSection = "" }: { focusSection?: stri
         <div className="hs-agent-card hs-agent-card-wide">
           <div className="hs-agent-card-title"><Tag kind="opt">功能</Tag>能力市场（门道社区）</div>
           <div className="hs-agent-card-desc">
-            从门道社区浏览并安装 Skill。<b>默认关闭</b>：它会向社区发起请求，而 ivyeaops 的默认立场是数据不出你的机器。
+            从门道社区浏览并安装 Skill。<b>默认关闭</b>：它会向社区发起请求，而 store-ops 的默认立场是数据不出你的机器。
             开启后也只在你主动浏览或安装时联网 —— 请求匿名、不带机器标识、不回传任何使用统计；装过的 Skill 落在本地，断网照常用。
             安装前会先给你看这个 Skill 的能力清单，确认后才落盘。
           </div>
