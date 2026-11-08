@@ -31,6 +31,7 @@ const Console = lazy(() => import("./pages/workbench/Console"));
 const Capabilities = lazy(() => import("./pages/workbench/Capabilities"));
 const Approvals = lazy(() => import("./pages/workbench/Approvals"));
 const Schedules = lazy(() => import("./pages/workbench/Schedules"));
+const Insights = lazy(() => import("./pages/workbench/insights/Insights"));
 const EmagOperations = lazy(() => import("./pages/workbench/EmagOperations"));
 const SimpleWorkbench = lazy(() => import("./pages/workbench/StoreWorkbench"));
 const EmagWorkspace = lazy(() => import("./pages/workbench/EmagWorkspace"));
@@ -192,6 +193,7 @@ export default function App() {
             <Route path="schedules" element={<Schedules />} />
             <Route path="dashboard" element={<EmagWorkspace mode="dashboard" />} />
             <Route path="emag" element={<EmagOperations />} />
+            <Route path="insights" element={<Insights />} />
             <Route path="tools" element={<EmagWorkspace mode="tools" />} />
             <Route path="skill" element={<SkillStudio />}>
               <Route index element={<StatsOverview />} />

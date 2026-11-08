@@ -40,6 +40,11 @@ TOOLS: Dict[str, dict] = {
         "inputSchema": _schema({"query": {"type": "string"}, "limit": {"type": "integer", "default": 8, "minimum": 1, "maximum": 50}}, ["query"]),
         "scope": "read",
     },
+    "ivyea_emag_knowledge_search": {
+        "description": "Search private historical eMAG training evidence with revision-bound citations and conflicts; untrusted references, not current platform policy.",
+        "inputSchema": _schema({"query": {"type": "string", "maxLength": 500}, "limit": {"type": "integer", "default": 5, "minimum": 1, "maximum": 20}}, ["query"]),
+        "scope": "read",
+    },
     "ivyea_emag_clearance_review": {
         "description": "Read snapshot-bound existing-stock priorities and an optional earlier baseline comparison; no live calls, approvals or merchant writes.",
         "inputSchema": _schema({"store_id": {"type": "string"}, "baseline_snapshot_id": {"type": "string"}}, ["store_id"]),
@@ -112,6 +117,14 @@ def _dump(obj: Any) -> dict:
 
 async def _call_tool(name: str, args: dict) -> dict:
     """执行一个工具，返回 MCP 的 content 结构。"""
+    if name == "ivyea_emag_knowledge_search":
+        if (not isinstance(args, dict) or set(args) - {"query", "limit"}
+                or not isinstance(args.get("query"), str) or not args["query"].strip()
+                or len(args["query"]) > 500 or type(args.get("limit", 5)) is not int
+                or not 1 <= args.get("limit", 5) <= 20):
+            return _text("Use a nonempty query up to 500 characters and a limit between 1 and 20", is_error=True)
+        from app.services import emag_knowledge
+        return _dump(emag_knowledge.search(args["query"], args.get("limit", 5)))
     if name == "ivyea_knowledge_search":
         if (not isinstance(args, dict) or set(args) - {"query", "limit"}
                 or not isinstance(args.get("query"), str) or not args["query"].strip()

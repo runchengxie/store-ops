@@ -501,6 +501,10 @@ app.include_router(mcp_server_router.router, prefix="/api/mcp", tags=["mcp"])
 app.include_router(mcp_tokens_router.router, prefix="/api/mcp-admin", tags=["mcp"])
 from app.routers import emag_research as emag_research_router
 app.include_router(emag_research_router.router, prefix="/api/emag", tags=["emag"])
+from app.routers import emag_knowledge as emag_knowledge_router
+from app.routers import emag_assistance as emag_assistance_router
+app.include_router(emag_knowledge_router.router, prefix="/api/emag", tags=["emag"])
+app.include_router(emag_assistance_router.router, prefix="/api/emag", tags=["emag"])
 from app.routers import emag_operations as emag_operations_router
 app.include_router(emag_operations_router.router, prefix="/api/emag", tags=["emag"])
 from app.routers import emag_api_changes as emag_api_changes_router

@@ -1,0 +1,2 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';
+test('insights catalogs match and explain review limitations',async()=>{const p='src/pages/workbench/insights/';const en=JSON.parse(await readFile(p+'en.json'));const zh=JSON.parse(await readFile(p+'zh-CN.json'));assert.deepEqual(Object.keys(en).sort(),Object.keys(zh).sort());assert.match(en.localOnly,/not platform approval/);});
