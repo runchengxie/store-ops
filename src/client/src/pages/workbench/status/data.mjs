@@ -18,3 +18,15 @@ export function chooseStore(rows,preferred){
  if(rows.some(r=>r.store_id===preferred))return preferred;
  return [...rows].sort((a,b)=>(Date.parse(b.captured_at)||0)-(Date.parse(a.captured_at)||0))[0]?.store_id||'';
 }
+
+/** A server acknowledgement must be internally consistent before showing paused. */
+export function validMonitoringControl(value){
+ return !!value&&Number.isInteger(value.revision)&&value.revision>=0&&typeof value.paused==='boolean'&&
+  (value.paused?['pausing','paused'].includes(value.state):value.state==='enabled');
+}
+
+/** Late responses cannot undo a newer acknowledgement from another controller. */
+export function mergeMonitoringControl(current,incoming){
+ if(!validMonitoringControl(incoming))throw Error('Invalid control acknowledgement');
+ return validMonitoringControl(current)&&current.revision>incoming.revision?current:incoming;
+}

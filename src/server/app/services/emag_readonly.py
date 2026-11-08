@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 import math
 import re
 import time
+from app.services.automation_control import checkpoint
 
 import httpx
 
@@ -18,6 +19,7 @@ def collect(client, auth, *, page_size=100, delay=1, max_pages=100):
         if page > 1:
             time.sleep(delay)
         try:
+            checkpoint()
             response = client.post(ENDPOINT, json={'currentPage': page, 'itemsPerPage': page_size},
                                    auth=auth, follow_redirects=False)
             if not response.is_success:
@@ -55,6 +57,7 @@ def lookup_sku(client, auth, sku):
     def incomplete(reason):
         return {'status': 'incomplete', 'reason': reason, 'offer': None}
     try:
+        checkpoint()
         response = client.post(ENDPOINT, json={'part_number': sku, 'currentPage': 1, 'itemsPerPage': 100},
                                auth=auth, follow_redirects=False)
         if not response.is_success:

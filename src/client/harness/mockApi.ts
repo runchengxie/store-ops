@@ -1350,8 +1350,8 @@ export function installMockApi(): void {
     const full = (config.baseURL || "/api").replace(/^\/api/, "") + (config.url || "");
     ((window as any).__harnessRequests ||= []).push(full);
     if(full==='/operations/stores/second-ro/overview'&&new URLSearchParams(location.search).get('wbcase')==='multi')await new Promise(resolve=>setTimeout(resolve,400));
-    const platform = platformReply(full, config.method);
-    if (platform !== null) return { ...reply(config), data: platform };
+    const platform = platformReply(full, config.method, config.data);
+    if (platform !== null) {if(full.endsWith('/control')&&(window as any).__controlResponseDelay)await new Promise(resolve=>setTimeout(resolve,(window as any).__controlResponseDelay));return { ...reply(config), data: platform };}
     const statusCase=new URLSearchParams(location.search).get('statuscase');
     if((window as any).__statusListFail&&full==='/emag/stores')throw Object.assign(new Error('Synthetic list unavailable'),{response:{status:503}});
     if(statusCase==='empty'&&full==='/emag/stores')return {...reply(config),data:[]};

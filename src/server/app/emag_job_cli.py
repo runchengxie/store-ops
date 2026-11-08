@@ -25,7 +25,7 @@ def main(argv=None):
     except (ValueError,OSError,sqlite3.Error):
         print('Job unavailable: invalid store, storage error, or another run holds the lock.');return 2
     print(json.dumps(receipt,ensure_ascii=False))
-    return 0 if receipt['status']=='complete' else 1
+    return 0 if receipt['status'] in ('complete','paused') else 1
 
 
 if __name__=='__main__':raise SystemExit(main())
