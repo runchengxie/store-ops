@@ -79,3 +79,5 @@ AGPL-3.0. See [LICENSE](docs/license). Upstream attribution and existing license
 - [Market research and profitability](docs/emag-market-research.md)
 
 - [Store status home](docs/store-status-home.md)
+
+- [Operational knowledge and checks](docs/operational-knowledge.md)
