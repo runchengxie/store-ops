@@ -66,10 +66,8 @@ async def lifespan(app: FastAPI):
     # "no such table"。
     skip_bg = os.environ.get("IVYEA_OPS_SKIP_STARTUP_TASKS", "").lower() in {"1", "true", "yes"}
 
-    # Rebuild runner-side config from the authoritative IvyeaOps settings on
-    # every boot. This is required on a fresh Windows installation where the
-    # key may already exist in hub settings but ~/.hermes/config.yaml has not
-    # yet been created for that OS user.
+    # Preserve the settings hook for shared runners. Retired marketplace
+    # providers are never provisioned into external private MCP profiles.
     try:
         from app.core import hub_settings as _hub_settings
         from app.services.hermes_config_sync import on_settings_saved as _sync_runner_settings
@@ -77,10 +75,8 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("runner settings sync skipped: %s", e)
 
-    # Skill Studio directories: we provision our own state dir
-    # (~/.hermes/skill-studio/) but intentionally NEVER touch SKILLS_ROOT —
-    # that's Hermes' territory. If it doesn't exist we just warn; the Skill
-    # Studio API will surface a clear error on first call.
+    # Prepare application-owned Studio state and seed only the currently
+    # shipped eMAG skills without overwriting private skill files.
     ensure_studio_dirs()
     if not SKILLS_ROOT.exists():
         logger.warning("skills root missing: %s", SKILLS_ROOT)
