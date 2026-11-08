@@ -35,6 +35,11 @@ def _schema(props: Optional[dict] = None, required: Optional[list] = None) -> di
 
 # 店铺变更仍未开放；唯一写工具是保存本地巡检报告。
 TOOLS: Dict[str, dict] = {
+    "ivyea_knowledge_search": {
+        "description": "Search the local shared knowledge library and return source-labelled references.",
+        "inputSchema": _schema({"query": {"type": "string"}, "limit": {"type": "integer", "default": 8, "minimum": 1, "maximum": 50}}, ["query"]),
+        "scope": "read",
+    },
     "ivyea_emag_clearance_review": {
         "description": "Read snapshot-bound existing-stock priorities and an optional earlier baseline comparison; no live calls, approvals or merchant writes.",
         "inputSchema": _schema({"store_id": {"type": "string"}, "baseline_snapshot_id": {"type": "string"}}, ["store_id"]),
@@ -63,7 +68,7 @@ TOOLS: Dict[str, dict] = {
         "scope": "read",
     },
     "ivyea_health": {
-        "description": "IvyeaOps 版本与集成开关状态。用于确认连接是否正常。",
+        "description": "store-ops 版本与集成开关状态。用于确认连接是否正常。",
         "inputSchema": _schema(),
         "scope": "read",
     },
@@ -107,6 +112,14 @@ def _dump(obj: Any) -> dict:
 
 async def _call_tool(name: str, args: dict) -> dict:
     """执行一个工具，返回 MCP 的 content 结构。"""
+    if name == "ivyea_knowledge_search":
+        if (not isinstance(args, dict) or set(args) - {"query", "limit"}
+                or not isinstance(args.get("query"), str) or not args["query"].strip()
+                or len(args["query"]) > 4000 or type(args.get("limit", 8)) is not int
+                or not 1 <= args.get("limit", 8) <= 50):
+            return _text("Use a nonempty query and a limit between 1 and 50", is_error=True)
+        from app.services import ivyea_agent_service
+        return _dump(ivyea_agent_service.knowledge_search(args["query"], limit=args.get("limit", 8)))
     if name == "ivyea_emag_clearance_review":
         if (not isinstance(args, dict) or set(args) - {"store_id", "baseline_snapshot_id"}
                 or not isinstance(args.get('store_id'), str)

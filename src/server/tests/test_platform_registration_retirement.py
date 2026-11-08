@@ -15,13 +15,14 @@ def test_upgrade_removes_only_owned_skill_mount(tmp_path, monkeypatch):
     monkeypatch.setattr(agent_skills, "_agent_settings_file", lambda: path)
     agent_skills.register_roots()
     assert json.loads(path.read_text()) == {**original, "skill_roots": ["/user/amazon", "/user/emag"]}
-    assert agent_skills.exposed_roots() == []
+    assert agent_skills.exposed_roots() == [root / "emag"]
     assert agent_skills.register_roots()["changed"] is False
 
 
 @pytest.mark.parametrize("content", [None, "{broken", '{"skill_roots": ["/private"]}'])
 def test_no_registration_preserves_absent_or_private_config(tmp_path, monkeypatch, content):
     path = tmp_path / "settings.json"
+    monkeypatch.setattr(agent_skills, "SKILLS_ROOT", tmp_path / "absent-skills")
     if content is not None:
         path.write_text(content)
     monkeypatch.setattr(agent_skills, "_agent_settings_file", lambda: path)
@@ -136,3 +137,24 @@ def test_upgrade_does_not_seed_retired_bundle_or_delete_existing_skill(tmp_path,
     # Fresh installations cannot seed a retired bundled skill either.
     monkeypatch.setattr(skill_paths, "SKILLS_ROOT", tmp_path / "fresh")
     assert skill_paths.seed_bundled_skills() == 1
+
+
+@pytest.mark.parametrize('skill,prompt', [('', 'Run asin_audit_start.'), ('', 'Run ivyea_ops_asin_audit_start.'), ('amazon/amazon-listing-creative/SKILL.md', 'run'), ('','functions.ivyea_ops_lingxing_status()')])
+def test_punctuated_and_file_skill_refs_do_not_dispatch(tmp_path,monkeypatch,skill,prompt):
+    monkeypatch.setattr(schedules,'_db_path',lambda:tmp_path/'jobs.sqlite3');schedules.init_db()
+    from app.services import ivyea_agent_service
+    monkeypatch.setattr(ivyea_agent_service,'ensure_available',lambda:pytest.fail('Retired reference reached Agent'))
+    task=schedules.create_task(name='old',cron='0 9 * * *',prompt=prompt,skill=skill,principal='owner',role='user')
+    assert 'capability_retired' in schedules.run_task_now(task)['error']
+
+
+def test_only_emag_mount_is_added_for_fresh_and_upgrade(tmp_path,monkeypatch):
+    root=tmp_path/'skills';(root/'emag').mkdir(parents=True)
+    path=tmp_path/'agent/settings.json'
+    monkeypatch.setattr(agent_skills,'SKILLS_ROOT',root);monkeypatch.setattr(agent_skills,'_agent_settings_file',lambda:path)
+    agent_skills.register_roots()
+    assert json.loads(path.read_text())['skill_roots']==[str(root/'emag')]
+    path.write_text(json.dumps({'skill_roots':['custom',str(root/'amazon')],'private':'retained'}))
+    agent_skills.register_roots()
+    assert json.loads(path.read_text())=={'skill_roots':['custom',str(root/'emag')],'private':'retained'}
+    assert not agent_skills.register_roots()['changed']

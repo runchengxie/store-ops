@@ -1,18 +1,14 @@
-# Bundled skills
+# Bundled eMAG skills
 
-These are the skills the IvyeaOps boards depend on (ASIN audit, ad-report audit,
-Listing analysis). They are **seeded into `SKILLS_ROOT` (`~/.hermes/skills/`) on
-every server startup, never overwriting an existing skill** — see
-`server/app/core/skill_paths.py::seed_bundled_skills`.
+[简体中文](README.zh-CN.md)
 
-So a fresh install gets them automatically; if you edit a skill in 「Skill 中心」
-the on-disk copy wins and is never clobbered by this bundle.
+store-ops ships only these platform skills:
 
-Layout mirrors `SKILLS_ROOT`: `<category>/<skill-name>/SKILL.md` (+ assets).
-
-| Skill | Used by |
+| Skill | Purpose |
 |---|---|
-| `amazon/amazon-asin-cosmo-rufus-audit` | 分析工具 → ASIN 审计；Listing 分析 |
-| `amazon/zach-search-term-report-analyzer` | 分析工具 → 广告审计 |
-| `amazon/amazon-listing-creative` | Listing 工作台 → AI 分析/文案/图片提示词 |
-| `amazon/amazon-ad-campaign-optimization-xlsx` | 广告优化（xlsx 批量表） |
+| `emag/store-audit` | Source-bound review of imported eMAG evidence through scoped MCP tools |
+| `emag/price-validation` | Check a concrete eMAG price proposal against evidence and the existing approval boundary |
+
+`app/core/skill_paths.py` seeds bundled skills into the configured application `SKILLS_ROOT`, without overwriting existing skill files. `agent_skills.register_roots()` exposes only the existing `emag` directory to the Agent, merges it with arbitrary user roots, and removes the exact historical application-managed Amazon mount. It does not delete private skills or replace unrelated configuration. Corrupt settings remain unchanged and are reported.
+
+A fresh installation needs the shared Agent runtime configured before it can execute skills; mounting instructions does not grant MCP or marketplace write permissions. The layout is `<domain>/<skill>/SKILL.md` with optional referenced assets. Amazon implementations are removed; Git history retains the old source records.

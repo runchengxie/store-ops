@@ -44,7 +44,6 @@ export interface HubSettings {
   // Dedicated DeepSeek key (only used when 'deepseek' is in text_ai_providers)
   deepseek_api_key: string;
   // 资讯 RSS sources, newline-separated: url | name | category
-  news_feeds: string;
   // Market data
   // GBrain
   brain_root: string;

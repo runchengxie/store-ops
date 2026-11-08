@@ -1,4 +1,4 @@
-"""Application skill mount retirement; user-owned libraries remain untouched."""
+"""Application eMAG skill mount; user-owned libraries remain untouched."""
 from __future__ import annotations
 
 import json
@@ -11,8 +11,8 @@ from app.core.skill_paths import SKILLS_ROOT
 
 logger = logging.getLogger("ivyea.services.agent_skills")
 
-#: No application-managed external skill domains are currently exposed.
-EXPOSED_DOMAINS: tuple[str, ...] = ()
+#: Only the shipped eMAG domain is exposed to the shared Agent runtime.
+EXPOSED_DOMAINS: tuple[str, ...] = ("emag",)
 
 
 def _agent_settings_file() -> Path:
@@ -31,28 +31,33 @@ def register_roots() -> dict[str, Any]:
     **合并而不是覆盖** `skill_roots`：用户可能自己挂了别的库，我们只负责自己这几条。
     """
     path = _agent_settings_file()
-    if not path.exists():
-        return {"changed": False, "roots": []}
+    exists = path.exists()
     try:
-        settings = json.loads(path.read_text(encoding="utf-8"))
+        settings = json.loads(path.read_text(encoding="utf-8")) if exists else {}
     except (ValueError, OSError):
         return {"changed": False, "roots": [], "error": "Cannot read agent settings; preserved"}
     if not isinstance(settings, dict):
         return {"changed": False, "roots": []}
     current = settings.get("skill_roots", [])
-    # Only the precise historical mount owned by this application is retired.
-    # Do not normalize, classify or delete arbitrary user paths or skill files.
     retired = str(Path(SKILLS_ROOT) / "amazon")
     if isinstance(current, str):
-        merged = [] if current == retired else current
+        values = [current] if current else []
     elif isinstance(current, list):
-        merged = [root for root in current if root != retired]
+        values = list(current)
     else:
         return {"changed": False, "roots": []}
-    if merged == current:
+    merged = [root for root in values if root != retired]
+    for root in exposed_roots():
+        if root.is_dir() and str(root) not in merged:
+            merged.append(str(root))
+    if merged == values and (exists or not merged):
         return {"changed": False, "roots": merged}
     settings["skill_roots"] = merged
-    path.write_text(json.dumps(settings, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as stream:
+        json.dump(settings, stream, ensure_ascii=False, indent=2)
+        stream.write("\n")
     return {"changed": True, "roots": merged}
 
 

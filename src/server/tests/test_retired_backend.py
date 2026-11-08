@@ -31,7 +31,7 @@ def test_startup_has_no_retired_provider_imports():
 
 def test_public_mcp_rejects_retired_tools():
     from app.routers import mcp_server
-    for name in ('ivyea_ads_findings', 'ivyea_keyword_research', 'ivyea_knowledge_search'):
+    for name in ('ivyea_ads_findings', 'ivyea_keyword_research'):
         assert name not in mcp_server.TOOLS
         assert asyncio.run(mcp_server._call_tool(name, {}))['isError'] is True
 
@@ -42,3 +42,19 @@ def test_shared_runner_auto_ignores_retired_audit_preferences(monkeypatch):
     monkeypatch.setattr(hub_settings, 'get', lambda *args: 'hermes')
     monkeypatch.setattr(runners, '_find_bin', lambda name: f'/bin/{name}')
     assert runners._resolve_auto() == ('ivyea-agent', '/bin/ivyea-agent')
+
+
+def test_shared_knowledge_search_is_available_for_emag(monkeypatch):
+    import json
+    from app.routers import mcp_server
+    from app.services import ivyea_agent_service
+    def search(query,limit=8):
+        assert query=='eMAG listing policy' and limit==3
+        return {'items':[{'title':'eMAG policy','source':'manual-reference'}]}
+    monkeypatch.setattr(ivyea_agent_service,'knowledge_search',search)
+    result=asyncio.run(mcp_server._call_tool('ivyea_knowledge_search',{'query':'eMAG listing policy','limit':3}))
+    assert not result['isError']
+    assert json.loads(result['content'][0]['text'])['items'][0]['title']=='eMAG policy'
+    assert mcp_server.TOOLS['ivyea_knowledge_search']['scope']=='read'
+    from app.services.retired_capabilities import retired_reference
+    assert not retired_reference(prompt='Use ivyea_knowledge_search')
