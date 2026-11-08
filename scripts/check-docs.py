@@ -6,6 +6,7 @@ from urllib.parse import unquote
 
 ROOT=Path(__file__).resolve().parents[1]
 PRIORITY=['README.md','AGENTS.md','docs/architecture.md','docs/installation.md','docs/configuration.md','docs/usage.md','docs/operations.md','docs/contributing.md','docs/security.md','docs/repository-layout.md','docs/maintenance-audit.md']
+PRIORITY += ['docs/platform-adapters.md','docs/zh-CN/platform-adapters.md']
 PRIORITY += ['docs/store-status-home.md','docs/zh-CN/store-status-home.md']
 PRIORITY += ['docs/emag-playbooks.md','docs/zh-CN/emag-playbooks.md','docs/emag-market-research.md','docs/zh-CN/emag-market-research.md']
 PRIORITY += [f'docs/zh-CN/{name}.md' for name in ('readme','architecture','installation','configuration','usage','operations')]

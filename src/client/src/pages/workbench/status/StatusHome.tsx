@@ -19,7 +19,7 @@ export default function StatusHome({data,job,stores,store,onStore,loading,error,
  const result=deriveStatus(data,job,Date.now());const state=error?'offline':loading&&!data?'loading':result.state;
  const title=demo?'demoTitle':state;const action=demo?slides[index]:error?'offlineAction':loading&&!data?'loadingAction':result.action;
  const format=(value:number|null)=>value===null?'—':new Intl.NumberFormat(locale).format(value);
- let date=t('unknown');if(data&&Number.isFinite(Date.parse(data.captured_at)))date=new Intl.DateTimeFormat(locale,{dateStyle:'medium',timeStyle:'short',timeZone:'Europe/Bucharest'}).format(new Date(data.captured_at));
+ let date=t('unknown');if(data&&Number.isFinite(Date.parse(data.captured_at))){try{date=new Intl.DateTimeFormat(locale,{dateStyle:'medium',timeStyle:'short',timeZone:data.timezone||'UTC'}).format(new Date(data.captured_at));}catch{}}
  return <main className="status-home" data-testid="status-home" data-state={state} data-paused={paused||reduced||!visible||!active}>
   <header className="status-header"><Link to="/workbench" className="status-brand"><span className="status-brand-symbol" aria-hidden="true">s<span>o</span></span><span>{t('brand')}</span></Link><div className="status-header-actions">
    {stores.length>1&&<label className="status-store"><span>{t('store')}</span><select aria-label={t('store')} value={store} onChange={e=>onStore(e.target.value)}>{stores.map((s,i)=><option key={s.store_id} value={s.store_id}>{t('storeNumber',{n:i+1})}</option>)}</select></label>}
@@ -28,7 +28,7 @@ export default function StatusHome({data,job,stores,store,onStore,loading,error,
   </div></header>
   {demo&&<aside className="status-demo"><span>{t('demo')}</span><p>{t('demoNote')}</p></aside>}
   <section className="status-hero"><div className={'status-orb '+(demo||state==='working'?'status-orb-active':'')} aria-hidden="true"><div className="status-orb-halo"/><div className="status-orb-core"><span/><span/><span/></div><div className="status-orb-satellite"/></div>
-   <div className="status-title-line"><span className={'status-indicator status-indicator-'+state}/><span>{demo?'DEMO':state==='working'?'LIVE':'eMAG'}</span></div>
+   <div className="status-title-line"><span className={'status-indicator status-indicator-'+state}/><span>{demo?'DEMO':state==='working'?'LIVE':data?.platform_label||'store-ops'}</span></div>
    <h1>{t(title)}</h1><p className="status-hero-description" key={action}>{t(action)}</p>
    {error&&<button className="status-primary" onClick={onRefresh}>{t('refresh')}<ChevronRight size={16}/></button>}
    {!demo&&data&&['attention','recovery','stale'].includes(state)&&canInspect&&<Link className="status-primary" to={`/emag?store=${encodeURIComponent(store)}`}>{t('openReview')}<ChevronRight size={16}/></Link>}

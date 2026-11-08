@@ -67,3 +67,15 @@ test('demo cannot review against the same snapshot', () => {
   }), /新快照/);
   assert.equal(demo.request('GET', '/emag/stores/demo-ro').issues[0].state, 'executed');
 });
+
+test('canonical platform demo preserves exact source identity and metrics', () => {
+ const demo=createDemoState();
+ const stores=demo.request('GET','/operations/stores');
+ assert.equal(stores[0].platform,'emag');
+ const overview=demo.request('GET','/operations/stores/demo-ro/overview');
+ assert.equal(overview.source,'synthetic-demo');
+ assert.equal(overview.snapshot_id,'demo-v1');
+ assert.deepEqual(overview.metrics,{products:3,issues:2,stock:11});
+ assert.equal(overview.collection,null);
+ assert.throws(()=>demo.request('GET','/operations/stores/other/overview'));
+});

@@ -24,13 +24,13 @@
 
 手动任务读取或采集证据，存在基线时比较观测，保存绑定来源的报告和回执。每店锁防止此入口并发运行。采集失败保留旧快照，进程崩溃或存储失败可能没有新回执，须检查 run ID 和时间。
 
-这些 API 以追加方式保存快照和报告，普通本地文件不是防篡改存储。`StoreSnapshot` 包含源码、coverage、limitations 和带时区的 `captured_at`。当前格式没有显式 `schema_version`。ID 和结构化键不翻译。
+这些 API 以追加方式保存快照和报告，普通本地文件不是防篡改存储。`StoreSnapshot` 包含源码、coverage、limitations 和带时区的 `captured_at`。原有 schema version 1 快照保持兼容，不自动改写历史资料。ID 和结构化键不翻译。
 
 本地草稿和处理记录使用 SQLite，绑定店铺、快照和商品。状态为 `pending`、`proposed`、`approved`、`executed`、`reviewed`，受新旧版本和 revision 校验。`executed` 是人工记录，流程没有退回修改状态或平台执行器。
 
 ## Agent、MCP 与调度
 
-通用 Agent 授权在接受后可能继续命令或文件写入，与 eMAG 本地方案批准不同。MCP 用 bearer token scope 提供证据和本地报告，不开放账号密码或通用 eMAG 写代理。原 Amazon 研究工具不把 PNK 当作 ASIN。
+通用 Agent 授权在接受后可能继续命令或文件写入，与 eMAG 本地方案批准不同。MCP 用 bearer token scope 提供证据和本地报告，不开放账号密码或通用 eMAG 写代理。仅启用 eMAG adapter；Amazon 工具和启动任务已下线，见[平台适配边界](platform-adapters.md)。
 
 原调度器运行 Agent 提示词。eMAG 页面只生成命令、预览服务器 cron 和下载停用 JSON，Agent/操作系统调度器都不执行此草稿。
 

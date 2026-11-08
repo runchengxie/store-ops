@@ -24,7 +24,7 @@ The inspected checkout has no `.gitmodules` and no gitlinks. The vendored Agent 
 
 The manual job reads or collects evidence, compares observations where a baseline exists, saves a source-bound report and publishes a receipt. A per-store lock prevents overlapping runs through this entry point. Collection failure keeps the prior snapshot. A process crash or storage failure may prevent a new receipt, so check its run ID and timestamp.
 
-Snapshots and reports are append-only through these APIs. Files are ordinary local files, not tamper-proof storage. `StoreSnapshot` has source, coverage, limitations and timezone-aware `captured_at`. There is no explicit `schema_version` field in the current snapshot format. Store/snapshot/report IDs and structured keys are not translated.
+Snapshots and reports are append-only through these APIs. Files are ordinary local files, not tamper-proof storage. `StoreSnapshot` has source, coverage, limitations and timezone-aware `captured_at`. Existing schema-version-1 snapshots remain compatible without rewriting old artifacts. Store/snapshot/report IDs and structured keys are not translated.
 
 Local drafts and workflow records use SQLite. Drafts bind store, snapshot and product. Workflow transitions use snapshot freshness and revision checks. Current states are `pending`, `proposed`, `approved`, `executed`, `reviewed`. `executed` is a manual record. There is no rejection/rework state or marketplace executor in this flow.
 
@@ -32,7 +32,7 @@ Local drafts and workflow records use SQLite. Drafts bind store, snapshot and pr
 
 The console's general Agent permission flow can resume commands or file writes after an accepted decision. It is separate from local eMAG proposal approval.
 
-MCP exposes imported evidence and local reports through bearer-token scopes. It does not expose account passwords or a general eMAG write proxy. Original Amazon research tools remain platform-specific and do not accept eMAG PNKs as ASINs.
+MCP exposes imported evidence and local reports through bearer-token scopes. It does not expose account passwords or a general eMAG write proxy. The adapter registry enables only eMAG; retired Amazon tools and startup jobs are absent. See [adapter boundaries](platform-adapters.md).
 
 The existing scheduler runs Agent prompts. The eMAG schedule page only prepares commands, previews server cron times and downloads disabled JSON drafts. These drafts are not consumed by either the Agent scheduler or an OS scheduler.
 

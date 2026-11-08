@@ -106,7 +106,7 @@ Administrator REST routes under `/api/emag` include store listing, boards, works
 | `ivyea_report_read` | `read` | Read saved local report |
 | `ivyea_report_save` | `write` | Save a local source-bound report |
 
-MCP uses bearer tokens at `/api/mcp`; session login does not replace the token. These tools do not modify a marketplace. Generic Amazon keyword tools remain Amazon-specific.
+MCP uses bearer tokens at `/api/mcp`; session login does not replace the token. These tools do not modify a marketplace. Amazon keyword tools are retired; only enabled adapter capabilities are exposed.
 
 ## Schedule preparation
 

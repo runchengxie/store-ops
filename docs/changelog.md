@@ -8,6 +8,7 @@
 
 ## 2026-11-08
 
+- Introduce a common operations port with eMAG as the sole enabled adapter; remove Amazon-specific product code, algorithms, skills, providers and startup jobs. Preserve historical/private state and reject explicit retired task references before dispatch.
 - Allow status/demo sharing with `?lang=zh-CN` or `?lang=en`, use browser language on first visit, and simplify the status page copy to a brief demo notice.
 
 

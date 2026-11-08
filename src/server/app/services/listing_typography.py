@@ -1,4 +1,4 @@
-"""Amazon listing typography compositor.
+"""Product image typography compositor.
 
 The image model renders only the product, scene, light and composition.  This
 module adds accurate, editable copy using an adaptive layout rather than the old

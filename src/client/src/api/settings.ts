@@ -44,9 +44,7 @@ export interface HubSettings {
   // Dedicated DeepSeek key (only used when 'deepseek' is in text_ai_providers)
   deepseek_api_key: string;
   // 资讯 RSS sources, newline-separated: url | name | category
-  news_feeds: string;
   // Market data
-  sorftime_key: string;
   // GBrain
   brain_root: string;
   openai_api_key: string;
@@ -89,10 +87,6 @@ export interface HubSettings {
   skill_market_url: string;
   skill_market_pubkey: string;
   skill_market_allow_class_b: boolean;
-  // SIF — 深度分析工具箱，独立 key（mcp.sif.com Bearer token）
-  sif_key: string;
-  // SellerSprite — separate key, auto-registers stdio MCP server in Hermes
-  sellersprite_key: string;
   // Account (password_hash not exposed to frontend)
 }
 
@@ -126,7 +120,6 @@ export interface HealthResp {
   ai_chain?: AiChainStatus;
   ivyea_agent: RunnerStatus;
   apimart: RunnerStatus;
-  sorftime: RunnerStatus;
   brain_root: RunnerStatus;
   openai: RunnerStatus;
   runners: {
@@ -318,57 +311,5 @@ export interface FeishuActionResp {
 
 export async function feishuAction(body: Record<string, unknown>): Promise<FeishuActionResp> {
   const { data } = await api.post<FeishuActionResp>("/settings/feishu", body, { timeout: 40000 });
-  return data;
-}
-
-// ── 亚马逊官方 API（SP-API / Ads API）────────────────────────────────────────
-// 凭据只存 IvyeaAgent 一侧，这里全程只经手"要填什么"和"通没通"，不留副本。
-
-export interface AmazonMarketplace {
-  sid: string;
-  marketplace_id: string;
-  name: string;
-  country?: string;
-  region?: string;
-  ads_profile_id: string;
-  seller_id?: string;
-}
-export interface AmazonStatus {
-  ok: boolean;
-  error?: string;
-  hint?: string;
-  configured?: boolean;
-  ads_configured?: boolean;
-  ads_uses_own_app?: boolean;
-  region?: string;
-  spapi_host?: string;
-  ads_host?: string;
-  seller_id?: string;
-  marketplaces?: AmazonMarketplace[];
-  marketplace_count?: number;
-  with_ads_profile?: number;
-  catalog?: { marketplace_id: string; country: string; region: string }[];
-}
-export interface AmazonVerifyResp {
-  ok: boolean;
-  error?: string;
-  steps?: { step: string; ok: boolean; detail: string; hint: string }[];
-  profiles?: { profile_id: string; country: string; type: string; name: string; marketplace_id: string }[];
-}
-
-export async function getAmazonStatus(): Promise<AmazonStatus> {
-  const { data } = await api.get<AmazonStatus>("/settings/amazon", { timeout: 15000 });
-  return data;
-}
-
-export async function saveAmazonConfig(body: Record<string, unknown>): Promise<AmazonStatus> {
-  const { data } = await api.post<AmazonStatus>("/settings/amazon", body, { timeout: 30000 });
-  return data;
-}
-
-export async function amazonAction(action: string): Promise<AmazonVerifyResp> {
-  // verify 会真的换 token + 打库存接口 + 列广告档案，比本地读配置慢得多
-  const { data } = await api.post<AmazonVerifyResp>("/settings/amazon/action", { action },
-    { timeout: 120000 });
   return data;
 }

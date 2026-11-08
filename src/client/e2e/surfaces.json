@@ -14,6 +14,7 @@
   ],
 
   "routes": [
+    { "path": "/workbench",       "name": "店铺工作台" },
     { "path": "/dashboard",       "name": "运营驾驶舱" },
     { "path": "/console",         "name": "任务台" },
     { "path": "/capabilities",    "name": "能力市场" },
@@ -36,8 +37,6 @@
     { "path": "/idea-skill",      "name": "想法工坊" },
     { "path": "/skill-tools",     "name": "Skill 工具" },
     { "path": "/skill-hub",       "name": "Skill 中心" },
-    { "path": "/deep-analysis",   "name": "分析工具" },
-    { "path": "/lingxing",        "name": "领星 ERP" },
     { "path": "/hub-settings",    "name": "设置" },
     { "path": "/skill",           "name": "Skill Studio" },
     { "path": "/skill/browse",    "name": "Skill 浏览" },
@@ -49,14 +48,6 @@
   ],
 
   "tabs": [
-    { "path": "/lingxing?tab=dashboard",  "name": "领星·总览",   "enter": "url" },
-    { "path": "/lingxing?tab=operate",    "name": "领星·操作",   "enter": "url" },
-    { "path": "/lingxing?tab=audit",      "name": "领星·审计",   "enter": "url" },
-    { "path": "/lingxing?tab=config",     "name": "领星·配置",   "enter": "url" },
-    { "path": "/lingxing?tab=suggest",    "name": "领星·建议",   "enter": "url" },
-    { "path": "/lingxing?tab=optimizer",  "name": "领星·优化器", "enter": "url" },
-    { "path": "/lingxing?tab=automation", "name": "领星·自动化", "enter": "url" },
-    { "path": "/lingxing?tab=help",       "name": "领星·帮助",   "enter": "url" },
 
     { "path": "/brain?tab=chat",       "name": "知识库·对话", "enter": "url" },
     { "path": "/brain?tab=upload",     "name": "知识库·上传", "enter": "url" },
@@ -69,25 +60,6 @@
     { "path": "/capabilities?tab=community", "name": "能力·社区", "enter": "url" },
     { "path": "/capabilities?tab=skills",    "name": "能力·技能", "enter": "url" },
     { "path": "/capabilities?tab=mcp",       "name": "能力·MCP",  "enter": "url" },
-    { "path": "/capabilities?tab=agents",    "name": "能力·智能体", "enter": "url" },
-
-    { "path": "/dashboard", "name": "首页·关键词",   "enter": "local",
-      "storage": { "ivyea-ops.home.tab": "keywords" } },
-    { "path": "/dashboard", "name": "首页·竞品监控", "enter": "local",
-      "storage": { "ivyea-ops.home.tab": "asins" } },
-    { "path": "/dashboard", "name": "首页·自有ASIN", "enter": "local",
-      "storage": { "ivyea-ops.home.tab": "own" } },
-    { "path": "/dashboard", "name": "首页·类目大盘", "enter": "local",
-      "storage": { "ivyea-ops.home.tab": "category" } },
-
-    { "path": "/deep-analysis", "name": "分析·第2项", "enter": "click", "nth": 1 },
-    { "path": "/deep-analysis", "name": "分析·第3项", "enter": "click", "nth": 2 },
-    { "path": "/deep-analysis", "name": "分析·第4项", "enter": "click", "nth": 3 },
-    { "path": "/deep-analysis", "name": "分析·第5项", "enter": "click", "nth": 4 },
-    { "path": "/deep-analysis", "name": "分析·第6项", "enter": "click", "nth": 5 },
-
-    { "path": "/listing", "name": "Listing·第2步", "enter": "click", "nth": 1 },
-    { "path": "/listing", "name": "Listing·第3步", "enter": "click", "nth": 2 },
-    { "path": "/listing", "name": "Listing·第4步", "enter": "click", "nth": 3 }
+    { "path": "/capabilities?tab=agents",    "name": "能力·智能体", "enter": "url" }
   ]
 }

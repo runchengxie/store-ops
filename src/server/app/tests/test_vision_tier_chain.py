@@ -173,75 +173,12 @@ def _run(coro):
     return asyncio.run(coro)
 
 
-def test_reference_templates_skipped_loudly_without_semantic_vision(monkeypatch):
-    """T3 下版式逆向必须**留下跳过原因**，而不是静默返回空。
-
-    旧行为 `if not has_vision(): return []` —— 用户拿到一份莫名其妙少了参考版式的
-    方案，没有任何解释，也不知道配个视觉模型就能解锁。
-    """
-    from app.routers.listing import visuals
-
-    monkeypatch.setattr(visuals, "has_semantic_vision", lambda: False)
-    monkeypatch.setattr(visuals, "vision_tier_label", lambda: "本地 CV 度量（OCR：RapidOCR）")
-    monkeypatch.setattr(visuals, "_reference_images", lambda d: [f"http://x/{i}.jpg" for i in range(6)])
-
-    scrape: dict = {}
-    assert _run(visuals._analyze_reference_templates(scrape)) == []
-
-    notes = visuals._analysis_notes(scrape)
-    assert len(notes) == 1
-    assert notes[0]["code"] == "no_semantic_vision"
-    assert "本地 CV 度量" in notes[0]["message"]
-    assert "已跳过" in notes[0]["message"]
 
 
-def test_skip_notes_reach_the_plan_quality(monkeypatch):
-    """跳过说明要走前端已有的 issues 通道，且 severity=info 不参与扣分——
-    降级不是方案缺陷，标成 warning/error 会误导用户去改一个没问题的方案。"""
-    from app.routers.listing import visuals
-
-    monkeypatch.setattr(visuals, "_cached_white_product_source", lambda d: "")
-    monkeypatch.setattr(visuals, "_creative_plan_quality", lambda *a: {"score": 90, "ready": True, "issues": []})
-    monkeypatch.setattr(visuals, "vision_tier", lambda: 3)
-    monkeypatch.setattr(visuals, "vision_tier_label", lambda: "本地 CV 度量")
-
-    scrape: dict = {}
-    visuals._note_skipped_analysis(scrape, "reference_templates", "no_semantic_vision", "本项已跳过。")
-    plan = visuals._bind_reference_templates({"images": []}, "p1", scrape, "gallery")
-
-    quality = plan["quality"]
-    assert quality["score"] == 90                       # 未扣分
-    assert quality["vision_tier"] == 3
-    assert quality["vision_tier_label"] == "本地 CV 度量"
-    assert [i["severity"] for i in quality["issues"]] == ["info"]
-    assert quality["skipped_analyses"][0]["stage"] == "reference_templates"
 
 
-def test_visual_profile_lists_are_deduped():
-    """supporting_palette 这种"给我五个颜色"的位置最容易吐重复值。
-
-    实测 T3 出过 [白,白,红,红,黑]——生图的背景/承载面/辅助/强调/深中性五个槽位
-    塌成三种颜色，整套图没了层次。
-    """
-    from app.routers.listing import visuals
-
-    fallback = {"supporting_palette": [], "product_colours": [], "materials_and_finish": [],
-                "fidelity_anchors": [], "natural_interactions": [], "scene_families": [],
-                "visual_opportunities": [], "avoid": [], "category_family": "",
-                "object_behavior": "", "form_and_scale": ""}
-    got = visuals._normalise_product_visual_profile(
-        {"supporting_palette": ["#FFFFFF", "#ffffff", "#D42A2A", "#d42a2a", "#2A2A2A"]}, fallback)
-    assert got["supporting_palette"] == ["#FFFFFF", "#D42A2A", "#2A2A2A"]   # 保序、首现胜出
 
 
-def test_skip_notes_are_deduped():
-    """同一步骤重复记录只留一条——一次生成里同一个原因不该刷屏。"""
-    from app.routers.listing import visuals
-
-    scrape: dict = {}
-    visuals._note_skipped_analysis(scrape, "reference_templates", "a", "第一次")
-    visuals._note_skipped_analysis(scrape, "reference_templates", "b", "第二次")
-    assert len(visuals._analysis_notes(scrape)) == 1
 
 
 def test_vision_payload_reads_the_settings_passed_in(monkeypatch):

@@ -23,9 +23,6 @@ interface GeneratedSkill {
 }
 
 const CATEGORIES = [
-  "amazon",
-  "amazon/listing",
-  "amazon/ads",
   "research",
   "creative",
   "devops",
@@ -37,7 +34,7 @@ const CATEGORIES = [
 
 const INPUT_TYPES = [
   "text", "textarea", "number", "select", "boolean",
-  "asin", "marketplace", "keyword", "date",
+  "product_id", "market", "keyword", "date",
 ];
 
 type Mode = "rigorous" | "fast";

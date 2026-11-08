@@ -98,23 +98,3 @@ def test_subscription_login_counts_as_ready():
     assert body, "providerKeyReady 不见了？"
     for status in ("authenticated", "authenticated+refresh"):
         assert f'"{status}"' in body.group(0), f"{status} 没被算作就绪"
-
-
-def test_lingxing_mcp_url_is_upgraded_to_https(monkeypatch):
-    """http 会 302 到 https，而 httpx 默认不跟随重定向（POST 更不会）。
-
-    表现是"地址填得对、key 也对，就是连不上"。历史默认值和存量库里存的都是 http，
-    所以纠正必须发生在**读**的时候：只改默认值救不了已经存了 http 的机器。
-    """
-    from app.core import hub_settings
-    from app.services import lingxing_service
-
-    monkeypatch.setattr(hub_settings, "get",
-                        lambda k, d=None: "http://openmcp.lingxing.com/mcp-servers/lingxing-mcp"
-                        if k == "lingxing_mcp_url" else d)
-    assert lingxing_service._url().startswith("https://")
-
-    # 自建/内网的 http 地址不动 —— 那是用户自己的选择，不该替他改协议
-    monkeypatch.setattr(hub_settings, "get",
-                        lambda k, d=None: "http://127.0.0.1:9000/mcp" if k == "lingxing_mcp_url" else d)
-    assert lingxing_service._url() == "http://127.0.0.1:9000/mcp"

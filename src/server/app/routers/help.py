@@ -22,7 +22,6 @@ _DOCS: list[tuple[str, str, str]] = [
     ("config",       "configuration.md",             "配置项参考"),
     ("install",      "installation.md",            "安装与部署"),
     ("integrations", "integrations.md",       "外部集成"),
-    ("lingxing",     "lingxing-erp-guide.md", "领星 ERP 指南"),
     ("windows",      "windows-install.md",    "Windows 安装"),
 ]
 _BY_NAME = {name: (fn, title) for name, fn, title in _DOCS}

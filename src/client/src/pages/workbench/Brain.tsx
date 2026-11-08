@@ -74,12 +74,10 @@ const PRIMARY_TABS: { key: Tab; label: string }[] = [
   { key: "memory", label: "记忆" },
 ];
 
-// 空状态的 Amazon 运营快捷提问（点击直接发送）
 
 const CATEGORIES = [
   ["inbox", "收件箱"],
   ["emag", "eMAG"],
-  ["amazon", "Amazon"],
   ["products", "产品"],
   ["market", "市场"],
   ["ads", "广告"],
@@ -91,11 +89,6 @@ const TEMPLATES = [
   { key: "emag-product", label: "eMAG 商品证据", path: "emag/products/new-product.md", content: `# eMAG 商品证据\n\n- 商品 ID：\n- SKU：\n- PNK：\n- 站点：RO\n- 币种：RON\n- 来源 / 采集时间 / 快照版本：\n\n## 已验证规格与罗马尼亚语文案\n\n## 未知字段、认证与待核实事项\n\n## 采购成本、运费、税费（待补）\n` },
   { key: "emag-research", label: "eMAG 调研记录", path: "emag/research/new-research.md", content: `# eMAG 调研记录\n\n- 站点：RO\n- 关键词 / 类目：\n- 原始链接与发布日期：\n- 采集日期与样本范围：\n\n## 观察事实\n\n## 推断与不确定性\n\n本店商品结构不代表市场份额；没有来源的销量与搜索量标为未知。\n` },
   { key: "emag-operation", label: "eMAG 处理复查", path: "emag/operations/new-review.md", content: `# eMAG 处理复查\n\n- 原快照：\n- 商品 ID / SKU / PNK：\n- 平台异常原文与来源：\n- 拟改字段 / 旧值 / 新值 / 理由：\n- 人工批准记录：\n- 人工执行凭据：\n- 新快照与复查结果：\n\n草稿与批准均不代表已执行平台操作。\n` },
-  { key: "product", label: "产品页", path: "amazon/products/new-product.md", content: `# 产品页：待命名\n\n## 基础信息\n- ASIN：\n- 站点：US\n- 品牌：\n- 产品阶段：新品 / 盈利 / 重推 / 清货\n\n## 核心卖点\n- \n\n## 配置差异\n- 4G：\n- WiFi：\n- 电池/太阳能：\n\n## Listing 注意事项\n- 主图：\n- A+：\n- 合规风险：\n` },
-  { key: "keyword", label: "关键词分析", path: "amazon/keywords/new-keyword.md", content: `# 关键词分析：待命名\n\n## 词根 / 精准词\n- 关键词：\n- 站点：US\n\n## 需求判断\n- 搜索量：\n- 季节性：\n- 进入时机：\n\n## 竞争判断\n- Top ASIN：\n- 集中度：\n- 差异化切口：\n\n## 广告动作\n- 精准：\n- 词组 / 广泛：\n- 否词：\n` },
-  { key: "ad", label: "广告报告", path: "amazon/ads/new-ad-report.md", content: `# 广告报告：待命名\n\n## 背景\n- ASIN / SKU：\n- 目标：盈利 / 冲量 / 重推 / 清货\n- 时间范围：\n\n## 关键发现\n- CTR：\n- CVR：\n- ACOS：\n- 花费黑洞：\n\n## 动作清单\n1. \n2. \n3. \n` },
-  { key: "message", label: "买家消息/合规", path: "amazon/messages/new-buyer-message.md", content: `# 买家消息模板：待命名\n\n## 场景\n- 售后问题：\n- 客户情绪：\n- 风险点：不索评、不站外引流、不用好评换补偿\n\n## 英文模板\nDear Customer,\n\n\nBest regards,\nCustomer Support\n\n## 德文模板\nGuten Tag,\n\n\nMit freundlichen Grüßen\nCustomer Support\n` },
-  { key: "supplier", label: "供应商/1688 笔记", path: "amazon/suppliers/new-supplier-note.md", content: `# 供应商笔记：待命名\n\n## 产品\n- 名称：\n- 1688 链接：\n- 目标成本：\n\n## 规格\n- \n\n## 风险\n- 质量：\n- 认证：\n- 包装：\n- 交期：\n` },
 ];
 
 function fmtBytes(n: number): string {
@@ -574,7 +567,7 @@ const copyMessage = (m: ChatMsg) => {
       {tab === "search" && (
         <div>
           <div className="card" style={{ marginBottom: 10 }}><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <input className="inp" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && doSearch()} placeholder="搜索运营知识、ASIN 笔记、广告策略..." style={{ flex: 1, minWidth: 220 }} />
+            <input className="inp" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && doSearch()} placeholder="搜索运营知识、商品笔记、广告策略..." style={{ flex: 1, minWidth: 220 }} />
             <SheetSelect className="inp" value={mode} onChange={(v) => setMode(v as "search" | "query")} style={{ width: 120 }} title="检索模式"
               options={[{ value: "search", label: "search" }, { value: "query", label: "query" }]} />
             <button className="tbtn" onClick={doSearch} disabled={loading}>{loading ? "搜索中..." : "搜索"}</button>

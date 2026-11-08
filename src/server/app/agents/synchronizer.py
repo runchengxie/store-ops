@@ -440,7 +440,7 @@ def synchronize_ivyea() -> int:
     IvyeaAgent stores one JSON per session: {id, created, updated, model,
     messages:[{role,content}...], usage}. It has no project cwd, so group all
     under one synthetic project (mirrors hermes). Filter out IvyeaOps' own
-    internal ivyea calls (e.g. ASIN 审计 via HTTP with persist=True) by their
+    historical internal ivyea calls by their
     system-prompt marker so only real interactive chats show in the sidebar.
     """
     sessions_dir = Path.home() / ".ivyea" / "sessions"

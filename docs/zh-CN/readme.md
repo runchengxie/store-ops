@@ -1,4 +1,4 @@
-# ivyeaops 工作台
+# store-ops 工作台
 
 [英文权威版本](../../README.md)
 
@@ -6,7 +6,7 @@
 
 [eMAG 交互演示](https://runchengxie.github.io/store-ops/demo/) · 使用虚构数据，刷新后重置。
 
-本项目是 [Hector-xue/IvyeaOps](https://github.com/Hector-xue/IvyeaOps) 的自托管 fork，聚焦 eMAG RO 的证据巡检、经营摘要与本地草稿，原平台工具保留在明确的 legacy 路由中。
+本项目是 [Hector-xue/IvyeaOps](https://github.com/Hector-xue/IvyeaOps) 的自托管 fork，聚焦 eMAG RO 的证据巡检、经营摘要与本地草稿，采用通用运营底座与唯一 eMAG adapter，Amazon 执行入口已下线。
 
 [带来源的运营检查与记录](emag-playbooks.md)覆盖审核修复、Listing、变体、竞品观察、广告复盘、入仓装箱和成本依据，全部保留为本地工作流。
 

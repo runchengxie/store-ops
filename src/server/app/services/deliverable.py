@@ -5,7 +5,7 @@
 
 为什么以 Excel 为主
 ------------------
-亚马逊运营的工作流本来就跑在表格上（后台导出的是表格、给老板的周报是表格、
+运营的工作流本来就跑在表格上（后台导出的是表格、给老板的周报是表格、
 和供应链对的是表格）。给一份 PDF 好看但改不动，给一份表格他能直接往里加自己的列。
 
 **证据单独成页**是这份交付物和"AI 生成的一段话"最大的区别：每条结论后面跟着
@@ -20,7 +20,7 @@ from typing import Any, Dict, List
 
 logger = logging.getLogger("ivyea.services.deliverable")
 
-# 配色跟广告审计报表保持一致，同一个产品出来的东西该像一家的。
+# Shared report palette.
 _HEADER_BG = "1F3864"
 _EVIDENCE_BG = "EAF1FB"
 _WARN_BG = "FCE4D6"

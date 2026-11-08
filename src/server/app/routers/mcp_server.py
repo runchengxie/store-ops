@@ -1,17 +1,4 @@
-"""对外 MCP 服务：把 IvyeaOps 的亚马逊能力开放给别的 Agent。
-
-对标贝狸的 Amazon Seller MCP，**但方向是反的**：贝狸发的令牌指向贝狸的云，用户
-要用就得把店铺授权交出去；我们发的令牌指向**用户自己的机器** —— Claude Desktop、
-Cursor 或任何别的 Agent 连过来，数据从头到尾没离开过他那台服务器。
-
-这也是这个产品无法被 SaaS 复制的位置：同样是"一手数据 + AI 分析"，
-信任成本完全不同。
-
-协议
-----
-走 JSON-RPC over HTTP（MCP 的 Streamable HTTP 形态）。读取工具需要 read，
-本地报告保存需要 write，默认只发 read。当前不开放真实广告或店铺写工具。
-"""
+"""Authenticated MCP transport for shared evidence and eMAG tools."""
 from __future__ import annotations
 
 import json
@@ -48,6 +35,11 @@ def _schema(props: Optional[dict] = None, required: Optional[list] = None) -> di
 
 # 店铺变更仍未开放；唯一写工具是保存本地巡检报告。
 TOOLS: Dict[str, dict] = {
+    "ivyea_knowledge_search": {
+        "description": "Search the local shared knowledge library and return source-labelled references.",
+        "inputSchema": _schema({"query": {"type": "string"}, "limit": {"type": "integer", "default": 8, "minimum": 1, "maximum": 50}}, ["query"]),
+        "scope": "read",
+    },
     "ivyea_emag_clearance_review": {
         "description": "Read snapshot-bound existing-stock priorities and an optional earlier baseline comparison; no live calls, approvals or merchant writes.",
         "inputSchema": _schema({"store_id": {"type": "string"}, "baseline_snapshot_id": {"type": "string"}}, ["store_id"]),
@@ -76,34 +68,11 @@ TOOLS: Dict[str, dict] = {
         "scope": "read",
     },
     "ivyea_health": {
-        "description": "IvyeaOps 版本与集成开关状态。用于确认连接是否正常。",
+        "description": "store-ops 版本与集成开关状态。用于确认连接是否正常。",
         "inputSchema": _schema(),
         "scope": "read",
     },
-    "ivyea_ads_findings": {
-        "description": "读取一次广告审计的结论：每条带证据（指标/数值/时间窗/来源）"
-                       "与带护栏的建议动作。job_id 来自 IvyeaOps 广告审计页。",
-        "inputSchema": _schema({
-            "job_id": {"type": "string", "description": "广告审计任务 id"},
-        }, ["job_id"]),
-        "scope": "read",
-    },
-    "ivyea_knowledge_search": {
-        "description": "检索本机亚马逊运营知识库（政策、打法、站点差异），返回带出处的条目。",
-        "inputSchema": _schema({
-            "query": {"type": "string"},
-            "limit": {"type": "integer", "default": 8},
-        }, ["query"]),
-        "scope": "read",
-    },
-    "ivyea_keyword_research": {
-        "description": "关键词调研：搜索量、竞争度、相关词与在架商品概况（走已配置的数据源）。",
-        "inputSchema": _schema({
-            "keyword": {"type": "string"},
-            "marketplace": {"type": "string", "default": "US"},
-        }, ["keyword"]),
-        "scope": "read",
-    },
+
 }
 
 
@@ -143,6 +112,14 @@ def _dump(obj: Any) -> dict:
 
 async def _call_tool(name: str, args: dict) -> dict:
     """执行一个工具，返回 MCP 的 content 结构。"""
+    if name == "ivyea_knowledge_search":
+        if (not isinstance(args, dict) or set(args) - {"query", "limit"}
+                or not isinstance(args.get("query"), str) or not args["query"].strip()
+                or len(args["query"]) > 4000 or type(args.get("limit", 8)) is not int
+                or not 1 <= args.get("limit", 8) <= 50):
+            return _text("Use a nonempty query and a limit between 1 and 50", is_error=True)
+        from app.services import ivyea_agent_service
+        return _dump(ivyea_agent_service.knowledge_search(args["query"], limit=args.get("limit", 8)))
     if name == "ivyea_emag_clearance_review":
         if (not isinstance(args, dict) or set(args) - {"store_id", "baseline_snapshot_id"}
                 or not isinstance(args.get('store_id'), str)
@@ -176,29 +153,6 @@ async def _call_tool(name: str, args: dict) -> dict:
         from app.services import skill_market
         return _dump({"version": app_version(),
                       "skill_market_enabled": skill_market.market_enabled()})
-
-    if name == "ivyea_ads_findings":
-        from app.services.ad_audit import get_job
-        job = get_job(str(args.get("job_id") or ""))
-        if not job:
-            return _text("没有这个广告审计任务", is_error=True)
-        # get_job 已经把结论归一成 FindingList（core/findings 的统一契约），
-        # 直接给外部 Agent 的正是这一份 —— 带证据、带护栏，不是一段散文。
-        return _dump({"status": job.get("status"),
-                      "findings": job.get("findings", {})})
-
-    if name == "ivyea_knowledge_search":
-        from app.services import ivyea_agent_service as ia
-        return _dump(ia.knowledge_search(str(args.get("query") or ""),
-                                         limit=int(args.get("limit") or 8)))
-
-    if name == "ivyea_keyword_research":
-        from app.services import sorftime_service
-        data, errors = await sorftime_service.keyword_pipeline(
-            str(args.get("keyword") or ""), str(args.get("marketplace") or "US"))
-        # errors 一起回给对面：数据源半瘫时它得知道哪几块是缺的，
-        # 而不是拿着一份不完整的数据当完整的用。
-        return _dump({"data": data, "errors": errors})
 
     return _text(f"未知工具：{name}", is_error=True)
 

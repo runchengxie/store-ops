@@ -468,18 +468,18 @@ def test_ops_tools_permission_filter_and_bridge_token(ctx):
     from app.core.security import current_user
     from app.services import ivyea_ops_tools
 
-    current_user.set({"id": 7, "role": "user", "email": "u@example.com", "permissions": ["listing"]})
+    current_user.set({"id": 7, "role": "user", "email": "u@example.com", "permissions": ["tools"]})
     tools = ivyea_ops_tools.list_tools()
     names = {row["name"] for row in tools["tools"]}
-    assert "listing_projects" in names
-    assert "market_history" in names  # base module
+    assert "image_generate" in names
+    assert "show_image" in names
     assert "monitor_snapshot" not in names
 
     token = ivyea_ops_tools.issue_bridge_token()
     current_user.set(None)
-    listed = router.bridge_tools(router.OpsToolsListBody(module="listing"), authorization=f"Bearer {token}")
+    listed = router.bridge_tools(router.OpsToolsListBody(module="tools"), authorization=f"Bearer {token}")
     assert listed["principal"]["email"] == "u@example.com"
-    assert {row["name"] for row in listed["tools"]} >= {"listing_projects"}
+    assert {row["name"] for row in listed["tools"]} >= {"image_generate"}
 
 
 def test_unavailable_agent_maps_to_503(ctx, monkeypatch):

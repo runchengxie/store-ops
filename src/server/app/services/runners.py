@@ -1,9 +1,7 @@
-"""Shared agent-runner helpers used by audit services.
+"""Shared agent-runner helpers.
 
 The IvyeaOps workbench spawns agent CLIs (hermes / codex / claude) as
-subprocesses to execute skills. Both the ASIN audit and the ad-report audit
-share the same runner selection and invocation logic, so we lift it into a
-standalone module.
+subprocesses to execute skills and generate text.
 
 Design notes
 ------------
@@ -39,7 +37,7 @@ def _extra_paths() -> list[str]:
         "/usr/bin",
     ]
 
-# Ordered runner preference (auto-pick walks this list). IvyeaAgent 首选（自托管、自带亚马逊域）。
+# Ordered runner preference (auto-pick walks this list). IvyeaAgent 首选（自托管）。
 # 2026-08-06：hermes 从自动挑选序列里移除——它不再是任何板块的默认或兜底。
 # _find_bin("hermes") / _build_runner_cmd("hermes", …) 仍然保留，供 /agents 板块里
 # 用户手动选择 hermes provider 时使用；只是系统自己不会再走到它。
@@ -47,7 +45,7 @@ RUNNER_ORDER = ("ivyea-agent", "codex", "claude")
 
 # Human-friendly labels shown in the UI selector.
 RUNNER_LABELS = {
-    "ivyea-agent": "IvyeaAgent（推荐 · 自托管 · 亚马逊域 · 自带 MCP）",
+    "ivyea-agent": "IvyeaAgent（推荐 · 自托管 · 自带 MCP）",
     "hermes": "Hermes（仅手动选择）",
     "codex":  "Codex（OpenAI）",
     "claude": "Claude Code",
@@ -177,25 +175,9 @@ def runner_status() -> List[Dict[str, Any]]:
     return rows
 
 
-def _audit_default_runner() -> str:
-    """Configured default runner for audits (settings ``audit_default_runner``).
-
-    Defaults to ``hermes`` — the only runner IvyeaOps wires up with both the
-    skill (seeded to ~/.hermes/skills) and the data-source MCP (sorftime/sif_mcp
-    in ~/.hermes/config.yaml), so audits get skill guidance + real data and can
-    emit the structured JSON the UI parses. Falls back through RUNNER_ORDER.
-    """
-    try:
-        from app.core import hub_settings as _hs
-        return (str(_hs.get("audit_default_runner") or "").strip().lower()) or "hermes"
-    except Exception:
-        return "hermes"
-
-
 def _resolve_auto() -> tuple[Optional[str], Optional[str]]:
-    """Auto-pick: configured default (hermes) first, then RUNNER_ORDER."""
-    default = _audit_default_runner()
-    for cand in [default, *RUNNER_ORDER]:
+    """Auto-pick the first available shared runtime."""
+    for cand in RUNNER_ORDER:
         if not cand:
             continue
         p = _find_bin(cand)

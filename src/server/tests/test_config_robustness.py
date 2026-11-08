@@ -52,7 +52,7 @@ def test_self_check_returns_matrix(monkeypatch):
     by_key = {r["key"]: r for r in res["results"]}
     assert by_key["deepseek_api_key"]["status"] == "ok"
     assert by_key["text_ai_providers"]["status"] == "ok"
-    assert by_key["sorftime_key"]["status"] == "skip"   # not configured
+    assert "sorftime_key" not in by_key
     assert res["ok"] >= 2 and res["skip"] >= 1
 
 

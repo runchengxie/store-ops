@@ -69,9 +69,7 @@ SETTINGS_FILE: Path = STUDIO_ROOT / "settings.json"
 AUDIT_LOG_FILE: Path = STUDIO_ROOT / "audit.log"
 
 
-# Skills bundled with the install (shipped so fresh installs have the Amazon
-# audit / listing skills the boards depend on, even without a pre-existing
-# Hermes skill library).
+# Skills bundled with the install. User skill directories are never overwritten.
 #
 # Source layout: server/app/core/skill_paths.py → parents[4] = repo root.
 # Frozen exe (Windows x64 / PyInstaller --onefile): __file__ lives inside the
@@ -105,6 +103,9 @@ def seed_bundled_skills() -> int:
     seeded = 0
     for skill_md in BUNDLED_SKILLS.rglob("SKILL.md"):
         rel = skill_md.parent.relative_to(BUNDLED_SKILLS)
+        from app.services.retired_capabilities import retired_reference
+        if retired_reference(skill=rel.as_posix()):
+            continue
         dest = SKILLS_ROOT / rel
         if dest.exists():
             continue

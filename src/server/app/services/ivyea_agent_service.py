@@ -602,7 +602,7 @@ def chat_available() -> bool:
     """True when the local IvyeaAgent service answers /v1/health.
 
     Used by the knowledge-base chat to decide whether to route a turn through
-    the governed IvyeaAgent brain (its built-in Amazon knowledge base) instead
+    the governed IvyeaAgent brain (its configured knowledge base) instead
     of the legacy Hermes/global fallback.
     """
     try:
@@ -1266,22 +1266,3 @@ def sync_feishu_settings(settings: dict[str, Any] | None = None) -> dict[str, An
         # 老版本 serve 没有 /v1/config/feishu；CPU 告警那条链路不受影响，照常保存。
         logger.debug("configure_feishu 失败（旁路，已忽略）：%s", exc)
         return {"ok": False, "error": str(exc)}
-
-
-# ── 亚马逊官方 API（SP-API / Ads API）────────────────────────────────────────
-# 凭据只存 IvyeaAgent 一侧（~/.ivyea/.env），ops 不留副本：与飞书那组不同，
-# 这里没有"agent 挂了也要能用"的场景 —— 取数本来就是 agent 干的活。
-# 存两份的唯一后果是长期不一致。
-
-def amazon_status() -> dict[str, Any]:
-    return request_json("GET", "/v1/config/amazon")
-
-
-def configure_amazon(payload: dict[str, Any]) -> dict[str, Any]:
-    return request_json("POST", "/v1/config/amazon", payload, timeout=max(_timeout(), 20.0))
-
-
-def amazon_action(payload: dict[str, Any]) -> dict[str, Any]:
-    """verify 会真的去打亚马逊（换 token + 库存接口 + 广告档案），给足超时。"""
-    return request_json("POST", "/v1/config/amazon/action", payload,
-                        timeout=max(_timeout(), 90.0))

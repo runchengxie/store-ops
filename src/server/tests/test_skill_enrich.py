@@ -12,30 +12,30 @@ description_zh: 竞品 Listing 分析
 category: creative
 icon: "◇"
 inputs:
-  - name: asin
-    label: 产品ASIN
-    type: asin
+  - name: product_id
+    label: 商品ID
+    type: text
     required: true
 tool:
   kind: report
   runtime: llm-only
   inputs:
-    - name: asin
-      label: 产品ASIN
-      type: asin
+    - name: product_id
+      label: 商品ID
+      type: text
       required: true
   output:
     format: markdown
     persist: true
     exportable: true
   sample_params:
-    asin: B0EXAMPLE1
+    product_id: example-product
 ---
 ## 使用参数
-- {{asin}}：要分析的产品
+- {{product_id}}：要分析的产品
 
 ## 执行步骤
-1. 分析 {{asin}} 的 Listing
+1. 分析 {{product_id}} 的 Listing
 """
 
 _BAD_MD = """---

@@ -549,7 +549,7 @@ def put_settings_route(
 
 class GenerateFromIdeaBody(BaseModel):
     idea: str = Field(..., min_length=2, description="一句话描述你的想法")
-    category: str | None = Field(None, description="目标分类，如 amazon/research")
+    category: str | None = Field(None, description="目标分类，如 operations/research")
     ref_skill: str | None = Field(None, description="参考 Skill 名称（可选）")
 
 
@@ -580,13 +580,8 @@ async def generate_from_idea(
     prompt = f"""你是一位 Hermes Skill 编写专家。用户描述了一个需求，请帮他**编写**一份完整的 SKILL.md。
 
 【重要】你现在的任务是"写说明书"，不是"执行任务"。
-- 不要现在去抓取任何数据、不要调用任何工具、不要要求用户提供真实 ASIN 或关键词。
-- 你只需写出这份 SKILL.md 文档——它描述这个 Skill 将来被运行时该怎么做。
-- 运行环境里有这些 MCP 工具可供该 Skill 使用（写步骤时可引用它们）：
-  · Sorftime（`mcp_sorftime_*`）：关键词详情/趋势、商品报告/流量词/评论、类目报告等
-  · SIF（`mcp_sif_*`）：关键词竞争、竞品关键词信号、流量异常
-  · 卖家精灵 SellerSprite（`mcp_sellersprite_*`）：关键词流量、ASIN 关键词、竞品词分析
-  真实抓数据是 Skill **被运行时**才发生的事，由用户在工具页填入真实参数后触发。
+- 不要现在抓取数据或调用工具，只编写说明书。
+- 只有经过当前工具目录核实的 MCP 工具才可以被引用，不要假设任何外部工具可用。
 
 用户需求：{body.idea}
 {f"目标分类：{body.category}" if body.category else "请自行判断最合适的分类。"}
@@ -601,7 +596,7 @@ async def generate_from_idea(
    - category: 分类路径
    - icon: 一个合适的 emoji 图标
    - inputs: 该 Skill 运行时需要用户填的参数（数组，每项含 name/label/type/required），
-     例如抓评论类通常需要 asin、marketplace 等。
+     例如资料分析通常需要 product_id、market 等。
 
 2. Markdown body：
    - 简要说明这个 Skill 的用途和使用场景
@@ -612,8 +607,7 @@ async def generate_from_idea(
 只输出 SKILL.md 的完整内容（从 --- 开始），不要加其他解释。"""
 
     # Plain text-only generation: we want the model to WRITE a SKILL.md, not
-    # execute it. synthesize_native() would inject sorftime tool-calling and
-    # try to fetch market data — wrong for authoring. generate_text has no tools.
+    # execute it. generate_text has no tools.
     try:
         full_text = (await ai_synthesis_service.generate_text(prompt)).strip()
     except Exception as exc:
@@ -644,25 +638,6 @@ async def generate_from_idea(
             name = "generated-skill"
 
     category = body.category or fm.get("category", "")
-    # Fallback auto-categorization when neither the user nor the AI set one:
-    # map keywords in the idea to a sensible top-level category so the skill
-    # doesn't land in "(未分类)".
-    if not category:
-        idea_l = body.idea.lower()
-        _CAT_RULES = [
-            ("amazon/reviews",   ["评论", "review", "差评", "好评", "口碑"]),
-            ("amazon/ads",       ["广告", "投放", "ad ", "ppc", "acos", "竞价", "出价"]),
-            ("amazon/listing",   ["listing", "标题", "五点", "描述", "文案", "a+", "卖点"]),
-            ("amazon/keywords",  ["关键词", "keyword", "搜索量", "长尾"]),
-            ("amazon/competitor",["竞品", "对手", "competitor", "对比"]),
-            ("amazon/market",    ["市场", "选品", "类目", "趋势", "market", "调研"]),
-            ("amazon",           ["asin", "亚马逊", "amazon", "产品", "商品"]),
-        ]
-        for cat, kws in _CAT_RULES:
-            if any(k in idea_l for k in kws):
-                category = cat
-                break
-
     # Keep frontmatter's category in sync so the saved SKILL.md carries it.
     if category:
         fm["category"] = category

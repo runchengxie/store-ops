@@ -416,7 +416,7 @@ export function encodePath(name: string): string {
  * 是**挂目录**不是复制：Skill 中心里改完立即生效，没有同步这一步。
  */
 export interface AgentSyncStatus {
-  /** 挂上去的分类。目前只有 amazon —— 全库近百个技能挂上去会淹掉匹配。 */
+  /** 应用管理的平台技能分类。 */
   domains: string[];
   /** 挂上去的目录绝对路径。 */
   roots: string[];

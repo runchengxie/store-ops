@@ -495,7 +495,7 @@ function detectChartForTable(
 
   const isPriceDist = /价格区间|价格带|价格分布/.test(heading) || /价格区间|价格段/.test(headers[0] || "");
   if (isPriceDist) {
-    const preferOrder = ["产品数", "asin数", "月销量", "月均销量", "占比", "数量", "销售额"];
+    const preferOrder = ["产品数", "月销量", "月均销量", "占比", "数量", "销售额"];
     let targetCol = 1;
     for (const pref of preferOrder) {
       const idx = headers.findIndex((h) => h.toLowerCase().includes(pref.toLowerCase()));

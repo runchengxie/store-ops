@@ -7,10 +7,10 @@ export function deriveStatus(data,job,now=Date.now()){
  const active=same&&job?.status==='running'&&Number.isFinite(stamp)&&now-stamp>=0&&now-stamp<=120000;
  const ended=Date.parse(job?.finished_at||job?.updated_at||job?.started_at);
  const failed=same&&job?.status==='failed'&&Number.isFinite(ended)&&ended>=captured&&ended<=now+60000;
- const issues=Array.isArray(data.issues)?data.issues.length:null;
+ const issues=count(data.metrics?.issues);
  const state=failed?'recovery':active?'working':stale?'stale':issues?'attention':'waiting';
  return {state,action:active?(job.stage==='collection'?'readingAction':'reviewingAction'):failed?'recoveryAction':stale?'staleAction':issues?'attentionAction':'waitingAction',stale,
-  metrics:{products:Array.isArray(data.offers)?data.offers.length:null,issues,stock:count(data.commercial_summary?.inventory?.general_stock_total)}};
+  metrics:{products:count(data.metrics?.products),issues,stock:count(data.metrics?.stock)}};
 }
 
 /** Prefer the freshest saved evidence, preserving an explicit valid choice. */

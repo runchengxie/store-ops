@@ -30,26 +30,18 @@ from app.core.skill_paths import (
     ensure_studio_dirs,
     studio_paths_summary,
 )
-from app.routers import ad_audit, amazon, auth, brain, health, ivyea_agent, monitor, news, skill, terminal
-from app.routers import cockpit as cockpit_router
-from app.routers import listing as listing_router
+from app.routers import auth, brain, health, ivyea_agent, monitor, skill, terminal
 from app.routers import image_translate as image_translate_router
-from app.routers import market as market_router
-from app.routers import playbook as playbook_router
-from app.routers import home as home_router
 from app.routers import schedules as schedules_router
 from app.routers import assistant as assistant_router
 from app.routers import help as help_router
 from app.routers import hub_settings as hub_settings_router
-from app.routers import data_sources as data_sources_router
 from app.routers import projects as projects_router
 from app.routers import git as git_router
 from app.routers import setup as setup_router
 from app.routers import freight as freight_router
-from app.routers import deep_analysis as deep_analysis_router
 from app.routers import skill_tools as skill_tools_router
 from app.routers import autofix as autofix_router
-from app.routers import lingxing as lingxing_router
 from app.routers import skill_market as skill_market_router
 from app.routers import notify as notify_router
 from app.routers import mcp_server as mcp_server_router
@@ -74,10 +66,8 @@ async def lifespan(app: FastAPI):
     # "no such table"。
     skip_bg = os.environ.get("IVYEA_OPS_SKIP_STARTUP_TASKS", "").lower() in {"1", "true", "yes"}
 
-    # Rebuild runner-side config from the authoritative IvyeaOps settings on
-    # every boot. This is required on a fresh Windows installation where the
-    # key may already exist in hub settings but ~/.hermes/config.yaml has not
-    # yet been created for that OS user.
+    # Preserve the settings hook for shared runners. Retired marketplace
+    # providers are never provisioned into external private MCP profiles.
     try:
         from app.core import hub_settings as _hub_settings
         from app.services.hermes_config_sync import on_settings_saved as _sync_runner_settings
@@ -85,10 +75,8 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("runner settings sync skipped: %s", e)
 
-    # Skill Studio directories: we provision our own state dir
-    # (~/.hermes/skill-studio/) but intentionally NEVER touch SKILLS_ROOT —
-    # that's Hermes' territory. If it doesn't exist we just warn; the Skill
-    # Studio API will surface a clear error on first call.
+    # Prepare application-owned Studio state and seed only the currently
+    # shipped eMAG skills without overwriting private skill files.
     ensure_studio_dirs()
     if not SKILLS_ROOT.exists():
         logger.warning("skills root missing: %s", SKILLS_ROOT)
@@ -116,42 +104,6 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("skill roots mount skipped: %s", e)
 
-    # Best-effort: sweep expired ASIN audit artifacts (30-day retention).
-    try:
-        from app.services.asin_audit import sweep_expired as _sweep_audits
-        n = _sweep_audits()
-        if n:
-            logger.info("purged %s expired audit dirs", n)
-    except Exception as e:
-        logger.warning("audit sweep skipped: %s", e)
-
-    # Rescue ghost "running" jobs left behind by a prior crash/restart:
-    # _live_jobs is empty on boot, so anything status=running on disk is stale.
-    try:
-        from app.services.asin_audit import sweep_stale_running
-        n = sweep_stale_running()
-        if n:
-            logger.warning("marked %s stale running jobs as failed", n)
-    except Exception as e:
-        logger.warning("stale running sweep skipped: %s", e)
-
-    # Same pair of sweeps for ad-audit jobs.
-    try:
-        from app.services.ad_audit import sweep_expired as _sweep_ad
-        n = _sweep_ad()
-        if n:
-            logger.info("purged %s expired ad-audit dirs", n)
-    except Exception as e:
-        logger.warning("ad-audit expired sweep skipped: %s", e)
-
-    try:
-        from app.services.ad_audit import sweep_stale_running as _sweep_ad_stale
-        n = _sweep_ad_stale()
-        if n:
-            logger.warning("marked %s stale ad-audit jobs as failed", n)
-    except Exception as e:
-        logger.warning("ad-audit stale sweep skipped: %s", e)
-
     # Best-effort: when IvyeaOps boots on a new version, refresh the bundled
     # IvyeaAgent once in the background so the two stay in sync (skipped for
     # editable/source installs and when auto-start is off).
@@ -161,14 +113,6 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("agent auto-sync skipped: %s", e)
 
-    # Market research history DB.
-    try:
-        from app.routers.market import _init_history_db as _init_market_hist
-        _init_market_hist()
-        logger.info("market history DB ready")
-    except Exception as e:
-        logger.warning("market history DB init skipped: %s", e)
-
     # Agents native backend: ensure its metadata tables exist (no-op against
     # the live ~/.agents/auth.db the old Node service shared).
     try:
@@ -177,22 +121,6 @@ async def lifespan(app: FastAPI):
         logger.info("agents DB ready")
     except Exception as e:
         logger.warning("agents DB init skipped: %s", e)
-
-    # Launch-playbook history DB.
-    try:
-        from app.routers.playbook import _init_history_db as _init_playbook_hist
-        _init_playbook_hist()
-        logger.info("playbook history DB ready")
-    except Exception as e:
-        logger.warning("playbook history DB init skipped: %s", e)
-
-    # Home monitor (watchlist + snapshots) DB.
-    try:
-        from app.routers.home import _init_db as _init_home_db
-        _init_home_db()
-        logger.info("home monitor DB ready")
-    except Exception as e:
-        logger.warning("home monitor DB init skipped: %s", e)
 
     # Registered-users DB (multi-user mode).
     try:
@@ -283,22 +211,6 @@ async def lifespan(app: FastAPI):
     notify_status("ready")
     _watchdog_task = None if skip_bg else asyncio.create_task(watchdog_loop(), name="sd-watchdog")
 
-    # Home market-traffic daily recorder: wakes every 30 min and records a
-    # daily point for each tracked baseline / watched ASIN that lacks one.
-    # Best-effort, never blocks boot or shutdown.
-    async def _market_daily_loop():
-        while True:
-            try:
-                from app.routers.home import run_due_recordings
-                summary = await run_due_recordings()
-                if summary.get("recorded_market") or summary.get("recorded_asin"):
-                    logger.info("market recorder: %s", summary)
-            except Exception as e:
-                logger.warning("market recorder error: %s", e)
-            await asyncio.sleep(1800)
-
-    _market_task = None if skip_bg else asyncio.create_task(_market_daily_loop(), name="market-recorder")
-
     # Token-usage archiver: snapshot each tool's token data into IvyeaOps's own
     # DB once a day so history survives even after a tool is uninstalled.
     # Runs once shortly after boot, then every 24h. Best-effort.
@@ -308,13 +220,6 @@ async def lifespan(app: FastAPI):
         logger.info("token archive DB ready")
     except Exception as e:
         logger.warning("token archive init skipped: %s", e)
-
-    try:
-        from app.services import lingxing_service
-        lingxing_service.init_db()
-        logger.info("lingxing audit DB ready")
-    except Exception as e:
-        logger.warning("lingxing audit init skipped: %s", e)
 
     async def _token_archive_loop():
         await asyncio.sleep(120)  # let boot settle before first snapshot
@@ -328,23 +233,6 @@ async def lifespan(app: FastAPI):
             await asyncio.sleep(86400)  # daily
 
     _archive_task = None if skip_bg else asyncio.create_task(_token_archive_loop(), name="token-archiver")
-
-    # 驾驶舱预热（gated by cockpit_sync_enabled，默认关）。广告看板冷启动实测
-    # 24.7 秒/天/9店，页面直连没法用，只能后台把缓存灌满。
-    try:
-        from app.services.cockpit_sync import scheduler_loop as _cockpit_loop
-        _cockpit_task = None if skip_bg else asyncio.create_task(_cockpit_loop(), name="cockpit-sync")
-    except Exception as e:
-        _cockpit_task = None
-        logger.warning("cockpit sync scheduler skipped: %s", e)
-
-    # 领星 weekly advisory automation scheduler (gated by lingxing_auto_enabled).
-    try:
-        from app.services.lingxing_automation import scheduler_loop as _lx_auto_loop
-        _lingxing_auto_task = None if skip_bg else asyncio.create_task(_lx_auto_loop(), name="lingxing-auto")
-    except Exception as e:
-        _lingxing_auto_task = None
-        logger.warning("lingxing auto scheduler skipped: %s", e)
 
     # IvyeaAgent daemon 是 IvyeaOps 的子进程，没有独立的 systemd 单元 —— 也就是说
     # **每次 `systemctl restart ivyea-ops` 都会把它一起带走**，之后只有当某个请求
@@ -373,11 +261,10 @@ async def lifespan(app: FastAPI):
     yield
     # skip_bg 时这些任务压根没起，值是 None —— 统一按"有才取消/等待"处理，
     # 免得关停路径上冒 AttributeError（那会让每个测试的 teardown 都吐一堆噪音）。
-    for _task in (_warm_task, _scheduler_task, _watchdog_task, _market_task, _cockpit_task,
-                  _archive_task, _lingxing_auto_task):
+    for _task in (_warm_task, _scheduler_task, _watchdog_task, _archive_task):
         if _task is not None:
             _task.cancel()
-    for _task in (_watchdog_task, _market_task, _archive_task):
+    for _task in (_watchdog_task, _archive_task):
         if _task is None:
             continue
         try:
@@ -398,7 +285,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="IvyeaOps",
-    description="Self-hosted eMAG evidence and legacy marketplace operations",
+    description="Self-hosted platform operations and eMAG evidence",
     version="0.1.0",
     lifespan=lifespan,
 )
@@ -447,7 +334,7 @@ async def _origin_guard(request: Request, call_next):
         # The IvyeaAgent↔Ops bridge is a server-to-server callback authenticated
         # by an explicit bridge token (not a cookie session), so it carries no
         # Origin/Referer and is NOT CSRF-vulnerable. Without this exemption the
-        # whole agent→board flow (market_generate_report etc.) gets 403'd.
+        # authenticated agent bridge flow gets rejected.
         if request.url.path.startswith("/api/ivyea-agent-bridge/"):
             return await call_next(request)
 
@@ -602,10 +489,7 @@ _ADMIN = [Depends(require_admin)]
 app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 # --- Admin-only (code-exec / filesystem / config / server) ---
-# Grantable modules: admin OR a user granted the matching module key. The four
-# "分析工具" backends share the "tools" key.
-app.include_router(amazon.router, prefix="/api/amazon", tags=["amazon"], dependencies=[Depends(require_module("tools"))])
-app.include_router(ad_audit.router, prefix="/api/ad-audit", tags=["ad-audit"], dependencies=[Depends(require_module("tools"))])
+# Grantable modules: admin or a user granted the matching module key.
 app.include_router(monitor.router, prefix="/api/monitor", tags=["monitor"], dependencies=[Depends(require_module("servmon"))])
 app.include_router(skill.router, prefix="/api/skill", tags=["skill"], dependencies=[Depends(require_module("skill-hub"))])
 # 能力市场：与 Skill 中心同属一个板块权限。默认关闭（会外联），见 services/skill_market。
@@ -621,11 +505,11 @@ from app.routers import emag_operations as emag_operations_router
 app.include_router(emag_operations_router.router, prefix="/api/emag", tags=["emag"])
 from app.routers import emag_api_changes as emag_api_changes_router
 app.include_router(emag_api_changes_router.router, prefix="/api/emag", tags=["emag"])
+from app.routers import platform_operations as platform_operations_router
+app.include_router(platform_operations_router.router, prefix="/api/operations", tags=["operations"], dependencies=_ADMIN)
 # 通知渠道与 AI 预算：改的是"这台机器往哪儿发请求"，只有管理员能动。
 app.include_router(notify_router.router, prefix="/api/notify", tags=["notify"])
-app.include_router(news.router, prefix="/api/news", tags=["news"], dependencies=[Depends(require_module("news"))])
 app.include_router(brain.router, prefix="/api/brain", tags=["brain"], dependencies=[Depends(require_module("brain"))])
-app.include_router(listing_router.router, prefix="/api/listing", tags=["listing"], dependencies=[Depends(require_module("listing"))])
 app.include_router(image_translate_router.router, prefix="/api/image-translate", tags=["image-translate"], dependencies=[Depends(require_module("image-translate"))])
 app.include_router(terminal.router, prefix="/api/terminal", tags=["terminal"], dependencies=[Depends(require_module("terminal"))])
 # /agents (old native Workspace agent hub) retired — superseded by the native
@@ -638,24 +522,16 @@ app.include_router(agents_api_router, prefix="/api/agents", tags=["agents"], dep
 app.include_router(agents_ws_router, prefix="/api/agents", tags=["agents-ws"])
 app.include_router(ivyea_agent.router, prefix="/api/ivyea-agent", tags=["ivyea-agent"], dependencies=[Depends(require_module("agents"))])
 app.include_router(ivyea_agent.bridge_router, prefix="/api/ivyea-agent-bridge", tags=["ivyea-agent-bridge"])
-app.include_router(deep_analysis_router.router, prefix="/api/deep-analysis", tags=["deep-analysis"], dependencies=[Depends(require_module("tools"))])
 app.include_router(skill_tools_router.router, prefix="/api/skill-tools", tags=["skill-tools"], dependencies=[Depends(require_module("tools"))])
 # 定时任务：与任务台同属 agents 模块授权（本质是"让 Agent 到点自己跑一轮"）。
 app.include_router(schedules_router.router, prefix="/api", tags=["schedules"], dependencies=[Depends(require_module("agents"))])
 # --- Admin-only: config / other users / infra (never grantable) ---
 app.include_router(hub_settings_router.router, prefix="/api", tags=["settings"], dependencies=_ADMIN)
-app.include_router(data_sources_router.router, prefix="/api", tags=["data-sources"], dependencies=_ADMIN)
 app.include_router(projects_router.router, prefix="/api", tags=["projects"], dependencies=_ADMIN)
 app.include_router(git_router.router, prefix="/api", tags=["git"], dependencies=_ADMIN)
 app.include_router(setup_router.router, prefix="/api", tags=["setup"], dependencies=_ADMIN)
 app.include_router(autofix_router.router, prefix="/api", tags=["autofix"], dependencies=_ADMIN)
-app.include_router(lingxing_router.router, prefix="/api/lingxing", tags=["lingxing"], dependencies=_ADMIN)
-# 驾驶舱的促销/广告面：数据同源于领星，写通道也同一条 —— 权限就跟着领星走。
-app.include_router(cockpit_router.router, prefix="/api/cockpit", tags=["cockpit"], dependencies=_ADMIN)
 # --- Open to all registered users (analytical; AI forced HTTP-only) ---
-app.include_router(market_router.router, prefix="/api/market", tags=["market"])
-app.include_router(playbook_router.router, prefix="/api/playbook", tags=["playbook"])
-app.include_router(home_router.router, prefix="/api/home", tags=["home"])
 app.include_router(freight_router.router, prefix="/api/freight", tags=["freight"])
 app.include_router(assistant_router.router, prefix="/api/assistant", tags=["assistant"])
 app.include_router(help_router.router, prefix="/api", tags=["help"])
