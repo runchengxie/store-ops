@@ -1060,7 +1060,7 @@ const EMPTY: HubSettings = {
   image_model: "", image_api_key: "", image_base_url: "",
   apimart_key: "", apimart_base: "https://api.apimart.ai/v1",
   text_ai_providers: "ivyea-agent,assistant,deepseek,codex,claude",
-  vision_ai_providers: "openai,assistant", deepseek_api_key: "", 
+  vision_ai_providers: "openai,assistant", deepseek_api_key: "",
   brain_root: "", openai_api_key: "",
   alert_webhook: "", alert_app_id: "", alert_app_secret: "", alert_chat_id: "",
   alert_feishu_domain: "feishu",

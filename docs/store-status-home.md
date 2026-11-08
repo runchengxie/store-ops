@@ -30,3 +30,7 @@ Update the identified existing service from merged source and build/copy its mat
 ## Naming compatibility
 
 Visible product branding uses `store-ops`. Existing `IVYEA_OPS_*` configuration keys, credential target `IvyeaOps/eMAG/RO`, internal module names, API/tool identifiers and existing scheduled-task/data names remain compatible. A repository rename is not a data or credential migration. Upstream license notices and actual release references retain their original names. Replace those contracts only through a separate versioned migration, not a global search-and-replace.
+
+## Sharing language
+
+Use `?lang=zh-CN` to share the demo in Chinese, or `?lang=en` for English. An explicit URL language takes priority over a saved manual choice, then the first supported browser language is used; other languages fall back to English. Changing language also updates the current URL so it can be shared. The demo keeps only a short illustrative-data notice; the production view retains source time and material error/staleness states.
