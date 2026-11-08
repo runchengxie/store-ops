@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "purpose": "Reference inventory only; not consumed by the application, an installer or an Agent tool registry.",
+  "observed_on": "2026-11-08",
+  "integration_mode": "agent-mediated",
+  "tools": [
+    {
+      "id": "supplier-search-1688",
+      "source": "https://github.com/next-1688/1688-product-find",
+      "observed_revision": "2c7d8ee014ec24c730e5ddc966c70f2495891543",
+      "declared_skill_version": "1.7.0",
+      "interface": "External Python CLI with structured JSON output",
+      "role": "Supplier candidate search and comparison",
+      "required_for_application_startup": false,
+      "verification": "Local source inspection only; no authenticated API or end-to-end compatibility test in this stage.",
+      "redistribution": "No license file found in the inspected checkout; no source copied or bundled."
+    },
+    {
+      "id": "browser-playwright-mcp",
+      "source": "https://github.com/microsoft/playwright-mcp",
+      "package": "@playwright/mcp",
+      "observed_version": "0.0.84",
+      "interface": "External MCP server configured in the consuming Agent",
+      "role": "Authorized browser inspection and separately approved scoped operations",
+      "required_for_application_startup": false,
+      "verification": "Installed package metadata inspected; no live browser action or unattended-write verification in this stage."
+    }
+  ]
+}

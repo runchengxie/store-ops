@@ -8,6 +8,8 @@
 
 ## 2026-11-08
 
+- Document independent supplier/browser tools, observed versions and Agent-mediated evidence workflows. Add bilingual supplier research guidance; no application integration, automatic registration or marketplace permission is added.
+
 - Replace the status orb with a double-arrow pause/resume control, remove the duplicate step carousel, and shorten monitoring copy. Persist real per-store automatic monitoring pauses across restarts; active workers stop at safe checkpoints before the UI confirms paused.
 
 - Introduce a common operations port with eMAG as the sole enabled adapter; remove Amazon-specific product code, algorithms, skills, providers and startup jobs. Preserve historical/private state and reject explicit retired task references before dispatch.

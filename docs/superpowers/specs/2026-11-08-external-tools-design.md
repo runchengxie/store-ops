@@ -1,7 +1,7 @@
 # External tools: first-stage integration design
 
 Date: 2026-11-08
-Status: Proposed; implementation awaits scope approval.
+Status: Approved in the user conversation; first-stage documentation implementation.
 
 ## Intent and scope
 

@@ -12,3 +12,5 @@ store-ops 仅提供以下平台技能：
 `app/core/skill_paths.py` 将内置技能补入配置的应用 `SKILLS_ROOT`，不覆盖已有技能文件。`agent_skills.register_roots()` 仅将存在的 `emag` 目录提供给 Agent，与用户自有目录合并，并移除本应用原先精确管理的 Amazon 目录注册。不删除私有技能或覆盖无关设置；损坏的配置保持不变并报告。
 
 首次安装仍需配置共享 Agent 运行时。挂载说明不授予 MCP 或平台写入权限。目录结构为 `<domain>/<skill>/SKILL.md`，可附带引用资源。Amazon 实现已移除，原始记录保留在 Git 历史中。
+
+独立找货与浏览器工具不随项目打包，也不会自动注册。通过 Agent 调用的流程见[外部工具配置](../docs/zh-CN/external-tools.md)和[供货研究指引](../docs/zh-CN/supplier-research.md)。这些指引不增加技能挂载或平台操作权限。
