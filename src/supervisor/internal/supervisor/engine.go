@@ -1,9 +1,11 @@
 package supervisor
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -12,6 +14,7 @@ import (
 )
 
 type Engine struct {
+	persisted       []byte
 	mu              sync.Mutex
 	closed          bool
 	config          Config
@@ -77,10 +80,19 @@ func (e *Engine) persist() error {
 	if e.closed {
 		return errors.New("supervisor closed")
 	}
+	data, err := json.Marshal(e.state)
+	if err != nil {
+		e.fatal = err
+		return err
+	}
+	if bytes.Equal(data, e.persisted) {
+		return nil
+	}
 	if err := save(e.config.DataDir, e.state); err != nil {
 		e.fatal = err
 		return err
 	}
+	e.persisted = data
 	return nil
 }
 func (e *Engine) blocked(store string) bool {

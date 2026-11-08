@@ -439,3 +439,32 @@ func TestPausedQueuePollBackoff(t *testing.T) {
 		t.Fatal("pause polling changed persisted schedule")
 	}
 }
+
+func TestIdleTicksDoNotReplaceDurableState(t *testing.T) {
+	c := testConfig(t)
+	e, err := Open(c, &fakeBridge{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer e.Close()
+	now := time.Now()
+	if err = e.Tick(context.Background(), now); err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.Stat(filepath.Join(c.DataDir, "state.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 1; i < 30; i++ {
+		if err = e.Tick(context.Background(), now.Add(time.Duration(i)*time.Second)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	after, err := os.Stat(filepath.Join(c.DataDir, "state.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !os.SameFile(before, after) {
+		t.Fatal("idle ticks repeatedly replaced the durable state file")
+	}
+}
