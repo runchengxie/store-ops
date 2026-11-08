@@ -3,6 +3,7 @@ from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 import time
+from app.services.automation_control import checkpoint
 from app.services import emag_readonly, store_artifacts
 
 BASE='https://marketplace-api.emag.ro/api-3/'
@@ -32,6 +33,7 @@ def read_resource(client,auth,resource,filters,*,delay=1,max_pages=100):
     rows=[];seen=set();total=None
     for page in range(1,max_pages+1):
         time.sleep(delay)
+        checkpoint()
         response=client.post(endpoint,json={**filters,'currentPage':page,'itemsPerPage':100},auth=auth,follow_redirects=False)
         if not response.is_success:
             raise ValueError(f'{resource}: HTTP {response.status_code}')

@@ -29,3 +29,11 @@ Tasks explicitly referencing known retired application skill/tool identifiers fa
 ## Adding another platform later
 
 Implement a descriptor and the minimal operations port, validate account/market identity and source semantics, declare actual supported capabilities and register the adapter explicitly. Preserve provenance, completeness and vendor extensions. Add a write capability only with concrete endpoint allowlists, credential binding, approval scope, revision/live-preflight and read-back contracts; an HTTP POST may be a platform read endpoint, so verbs alone do not establish side effects.
+
+## Automatic monitoring control
+
+The overview includes `control` with `state` (`enabled`, `pausing`, or `paused`), `paused`, and `revision`. Admins can POST `{paused, revision}` to `/api/operations/stores/{store_id}/control`; stale revisions return 409. Intent is stored per store under the runtime data root.
+
+The homepage double arrow pauses scheduled/manual eMAG collection and audit workers, including future scheduled invocations. Workers stop at request boundaries and before evidence/report publication; a request already in flight may finish. The UI shows `pausing` until the serialized worker lock is released. Unknown/unavailable state is never treated as acknowledgement. Resume permits the next scheduled or manually triggered run; it does not launch an immediate collection. Windows task definitions are unchanged. A paused invocation records a paused receipt and exits successfully.
+
+This control covers automatic monitoring. Explicit user conversations, offline browsing, and separately approved price changes retain their own controls. The development demo simulates pause/resume locally and never changes real monitoring.

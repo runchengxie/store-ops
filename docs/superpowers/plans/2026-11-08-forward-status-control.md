@@ -1,0 +1,9 @@
+# Forward status and real takeover control
+
+Replace the orb with an accessible double-arrow button, remove the lower duplicate carousel, and retain one short status sentence. Label the public demo Internal development / 内部开发版 and Demo data / 演示数据. Demo pause changes the headline and halts simulated work.
+
+For real stores, persist pause intent per store in SQLite outside source. The existing serialized eMAG collection/audit worker checks that intent before starting, before every outbound collection request, before publishing evidence, and before saving a report. Existing network requests may finish; no new request starts after the next checkpoint. A separate request cancellation boundary is not claimed. The overview returns running/pausing/paused control state by checking the worker's existing cross-process lock. A paused intent blocks future scheduled runs without modifying Windows task definitions. Resume allows the next scheduled/manual run; it does not promise an immediate collection. Explicit user-directed chat and separately approved price writes remain outside automatic monitoring control, described in maintained docs.
+
+The UI submits desired state, never optimistic success, uses the server result, disables pending controls and reports failures. Version checks prevent stale control writes. Controls are scoped to the selected store and protected by admin authentication. Unknown control state must not be shown as paused. Polling continues while paused to confirm workers stopped and observe resume elsewhere.
+
+Validation: worker start/pause/resume persistence, concurrent pause during collection with no publish, HTTP checkpoint cancellation, lock-based pausing acknowledgement, auth/validation; real App browser pause/resume/error/store-switch/reduced-motion/mobile and public demo. Run prescribed typecheck/i18n/build, relevant backend tests and CI. Review then merge, deploy laptop, verify and clean only this task.

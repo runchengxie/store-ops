@@ -102,7 +102,7 @@ switch ($Action) {
                     $receipt = Get-Content -LiteralPath $receiptPath -Raw | ConvertFrom-Json
                     if ($receipt.run_id -ne $oldId) {
                         $receipt | ConvertTo-Json -Depth 20
-                        if ($receipt.status -ne 'complete') { exit 1 }
+                        if ($receipt.status -notin @('complete','paused')) { exit 1 }
                         exit 0
                     }
                 }

@@ -4,7 +4,7 @@ import json
 import sqlite3
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
-from app.services import store_artifacts as artifacts, emag_operations, emag_business, emag_audit
+from app.services import store_artifacts as artifacts, emag_operations, emag_business, emag_audit, automation_control
 
 
 def _root(store_id):
@@ -60,20 +60,37 @@ def run(store_id, collect_fn=None):
     conn = sqlite3.connect(root / 'run-lock.sqlite3', timeout=0)
     try:
         # Fail before collecting if another process holds this store's lock.
-        conn.execute('BEGIN IMMEDIATE')
+        try:
+            conn.execute('BEGIN IMMEDIATE')
+        except sqlite3.OperationalError as exc:
+            if getattr(exc, 'sqlite_errorcode', None) not in (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED) or not automation_control.view(store_id)['paused']:
+                raise
+            # A paused invocation may skip while the active worker drains. It
+            # gets its own receipt without replacing that worker's latest pointer.
+            now = datetime.now(timezone.utc).isoformat()
+            skipped = {'run_id':secrets.token_hex(16), 'store_id':store_id,
+                       'started_at':now, 'finished_at':now, 'status':'paused', 'stage':'paused',
+                       'mode':'fresh_collection' if collect_fn else 'existing_snapshot'}
+            artifacts._write_new(root / (skipped['run_id']+'.json'), skipped)
+            return skipped
+        token = automation_control.current_store.set(store_id)
         receipt = {'run_id': secrets.token_hex(16),'store_id': store_id,
                        'started_at': datetime.now(timezone.utc).isoformat(),
                        'mode': 'fresh_collection' if collect_fn else 'existing_snapshot','stage': 'source','status': 'running'}
         try:
+            automation_control.checkpoint()
             try: previous = artifacts.read_snapshot(store_id)
             except FileNotFoundError: previous = None
             if collect_fn:
                 receipt['stage']='collection'
-                snapshot=emag_business.publish(store_id,collect_fn())
+                evidence=collect_fn()
+                automation_control.checkpoint()
+                snapshot=emag_business.publish(store_id,evidence)
             elif previous:
                 snapshot=previous
             else:
                 raise FileNotFoundError('Collect evidence first')
+            automation_control.checkpoint()
             receipt['snapshot_id']=snapshot['snapshot_id']
             issues=emag_operations._issues(snapshot)
             receipt['stage']='report'
@@ -123,8 +140,11 @@ def run(store_id, collect_fn=None):
                 '## Structured diagnostic evidence (bounded)',*['    '+line for line in diagnostic_lines],
                 f"Diagnostic evidence truncated: {diagnostics['findings_truncated'] or len(diagnostic_lines)<len(diagnostics['findings'])}",
                 '## Source limitations',*['- '+emag_audit._cell(x, 500) for x in snapshot['limitations']]])
+            automation_control.checkpoint()
             report=artifacts.save_report(store_id,snapshot['snapshot_id'],'eMAG manual audit',text)
             receipt.update(report_id=report['report_id'],status='complete',stage='complete')
+        except automation_control.Paused:
+            receipt.update(status='paused',stage='paused')
         except Exception as exc:
             # Never persist exception text: HTTP errors may contain credential-bearing URLs/payloads.
             receipt.update(status='failed',error_type=type(exc).__name__)
@@ -134,4 +154,6 @@ def run(store_id, collect_fn=None):
         conn.commit()
         return receipt
     finally:
+        if 'token' in locals():
+            automation_control.current_store.reset(token)
         conn.close()
