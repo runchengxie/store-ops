@@ -8,6 +8,8 @@
 
 ## 2026-11-08
 
+- Add an optional durable Go supervisor for fixed read-only eMAG workers, with bounded concurrency, cooperative cancellation, receipt reconciliation and an explicit live-account binding. Retain Python business processing, credentials and authoritative pause controls.
+
 - Document independent supplier/browser tools, observed versions and Agent-mediated evidence workflows. Add bilingual supplier research guidance; no application integration, automatic registration or marketplace permission is added.
 
 - Replace the status orb with a double-arrow pause/resume control, remove the duplicate step carousel, and shorten monitoring copy. Persist real per-store automatic monitoring pauses across restarts; active workers stop at safe checkpoints before the UI confirms paused.

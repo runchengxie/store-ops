@@ -102,3 +102,5 @@ git log 记得住「改了什么」，记不住「为什么不选另一条路」
 - [0053: Clearance review handoff](0053-clearance-review-handoff.md)
 
 - [0058: Durable automatic monitoring pause control](0058-monitoring-pause-control.md)
+
+- [0061: Go supervisor with Python read-only workers](0061-go-readonly-supervisor.md)

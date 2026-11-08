@@ -1,0 +1,10 @@
+{
+  "python": "/opt/store-ops/venv/bin/python",
+  "server_dir": "/opt/store-ops/src/server",
+  "data_dir": "/var/lib/store-ops/supervisor",
+  "max_concurrency": 2,
+  "timeout_seconds": 3600,
+  "stores": [
+    {"store_id": "example-store", "interval_seconds": 86400}
+  ]
+}
