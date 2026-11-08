@@ -43,6 +43,8 @@ The standard application still has session authentication and administrator chec
 
 ## Models and integrations
 
+Supplier discovery and browser inspection use independently configured Agent tools; see [external tools](external-tools.md) for version records, private configuration and evidence boundaries. The [reference inventory](../configs/external-tools.reference.json) is documentation and is not loaded at startup.
+
 Console chat and image translation need their configured providers. Image translation supports RO/BG/HU as target languages, not additional connected eMAG stores. Deterministic evidence collection, offline audits and local drafts do not require a model.
 
 Only the eMAG commerce adapter is enabled. Retired Amazon provider defaults and automatic registrations are removed; existing private values are preserved. Generic external Agents remain separate integrations. Installing a skill does not grant platform access. GBrain is no longer the knowledge base runtime; old GBrain setup instructions and environment examples should not be used.

@@ -6,6 +6,8 @@
 
 ## 配置来源
 
+找货与浏览器检查使用独立配置的 Agent 工具，版本记录、私有配置和证据边界见[外部工具](external-tools.md)。[参考清单](../../configs/external-tools.reference.json)仅作记录，不会在启动时加载。
+
 参考模板位于 [`configs/server.env.example`](../../configs/server.env.example)。新建安装时，源码版将其复制到 `src/server/.env`，冻结发行包复制到 `server/.env`。填写必要的值，并保留已有配置。
 
 `src/server/app/core/config.py` 在启动时读取环境变量。源码使用 `src/server/.env`，缺失时兼容旧 `server/.env`；冻结包使用 `server/.env`。`IVYEA_OPS_ROOT` 可显式指定运行环境 root。已有进程环境值优先于 dotenv。
