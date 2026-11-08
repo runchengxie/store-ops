@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import time
 from datetime import datetime
+from types import SimpleNamespace
 
 import pytest
 
@@ -141,16 +142,20 @@ def test_due_tasks_picks_only_overdue_enabled():
     assert [x["id"] for x in sc.due_tasks(now=t["next_run"] + 1)] == [t["id"]]
 
 
-def test_reschedule_does_not_backfill_missed_runs():
+def test_reschedule_does_not_backfill_missed_runs(monkeypatch):
     """服务停了两天再起来，不该把欠下的几十次一口气补跑完。"""
+    # Freeze this module clock so a slow commit cannot cross a cron boundary.
+    now = _at(2026, 8, 7, 9, 2)
+    monkeypatch.setattr(sc, "time", SimpleNamespace(time=lambda: now))
     t = _mk(cron="*/5 * * * *")
     # 假装 next_run 停在两天前
     with sc._conn() as conn:
         conn.execute("UPDATE scheduled_tasks SET next_run = ? WHERE id = ?",
-                     (time.time() - 2 * 86400, t["id"]))
+                     (now - 2 * 86400, t["id"]))
     assert len(sc.due_tasks()) == 1          # 只会被捞起来一次
     nxt = sc.reschedule(t["id"], t["cron"])
-    assert nxt > time.time()                 # 从"现在"往后排，不是从两天前补
+    assert nxt > now                 # 从"现在"往后排，不是从两天前补
+    assert nxt == _at(2026, 8, 7, 9, 5)
     assert sc.due_tasks() == []
 
 

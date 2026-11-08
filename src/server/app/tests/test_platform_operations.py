@@ -49,3 +49,22 @@ def test_generic_api_remains_admin_only(snapshot):
   assert response.status_code==200
   assert response.json()['snapshot_id']==snapshot['snapshot_id']
   assert client.get('/api/operations/stores/missing/overview').status_code==404
+
+
+def test_monitoring_control_is_authenticated_versioned_and_store_scoped(snapshot):
+ from fastapi import FastAPI
+ from fastapi.testclient import TestClient
+ from app.core.security import require_admin
+ from app.routers.platform_operations import router
+ app=FastAPI();app.include_router(router,prefix='/api/operations')
+ path='/api/operations/stores/sample-ro/control'
+ with TestClient(app) as client:
+  assert client.post(path,json={'paused':True,'revision':0}).status_code==401
+  app.dependency_overrides[require_admin]=lambda:'operator'
+  assert client.post(path,json={'paused':'true','revision':0}).status_code==422
+  assert client.post('/api/operations/stores/missing/control',json={'paused':True,'revision':0}).status_code==404
+  paused=client.post(path,json={'paused':True,'revision':0})
+  assert paused.status_code==200 and paused.json()['state']=='paused'
+  assert client.get('/api/operations/stores/sample-ro/overview').json()['control']['paused'] is True
+  assert client.post(path,json={'paused':False,'revision':0}).status_code==409
+  assert client.post(path,json={'paused':False,'revision':paused.json()['revision']}).json()['state']=='enabled'

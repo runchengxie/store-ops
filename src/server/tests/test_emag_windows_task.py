@@ -39,7 +39,7 @@ def test_run_rejects_days_override():
 
 
 @pytest.mark.skipif(os.name != 'nt', reason='Windows task behavior')
-@pytest.mark.parametrize('behavior', ['fresh', 'no_receipt', 'foreign', 'triggered'])
+@pytest.mark.parametrize('behavior', ['fresh', 'paused', 'no_receipt', 'foreign', 'triggered'])
 def test_task_receipt_and_ownership_boundaries(tmp_path, behavior):
     script = ROOT / 'scripts/emag-ssh-task.ps1'
     env = os.environ.copy()
@@ -61,16 +61,16 @@ function Get-ScheduledTaskInfo {
 function Start-ScheduledTask {
     param($TaskName,$TaskPath)
     $global:started = $true
-    if ($env:TEST_BEHAVIOR -eq 'fresh') {
+    if ($env:TEST_BEHAVIOR -in @('fresh','paused')) {
         $dir=Join-Path $env:LOCALAPPDATA 'ivyeaops/emag-ssh-task/example-ro'
-        '{"store_id":"example-ro","run_id":"new","status":"complete"}' | Set-Content (Join-Path $dir 'last-run.json')
+        @{store_id='example-ro';run_id='new';status=$(if($env:TEST_BEHAVIOR -eq 'paused'){'paused'}else{'complete'})} | ConvertTo-Json -Compress | Set-Content (Join-Path $dir 'last-run.json')
     }
 }
 & $env:TEST_SCRIPT -Action run -StoreId example-ro -TimeoutSeconds 3
 '''
     result = subprocess.run([PWSH, '-NoProfile', '-Command', code], env=env, capture_output=True,
                             text=True, encoding='utf-8', errors='replace', timeout=15)
-    if behavior == 'fresh':
+    if behavior in ('fresh','paused'):
         assert result.returncode == 0, result.stderr
         assert json.loads(result.stdout)['run_id'] == 'new'
     else:
