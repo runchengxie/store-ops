@@ -1,0 +1,33 @@
+name: Supervisor
+on:
+  push:
+    paths: ['src/supervisor/**', 'src/server/app/supervisor_bridge.py', 'src/server/app/services/supervisor_bridge.py', 'src/server/app/services/automation_control.py', 'src/server/tests/test_supervisor_bridge.py', '.github/workflows/supervisor.yml']
+  pull_request:
+    paths: ['src/supervisor/**', 'src/server/app/supervisor_bridge.py', 'src/server/app/services/supervisor_bridge.py', 'src/server/app/services/automation_control.py', 'src/server/tests/test_supervisor_bridge.py', '.github/workflows/supervisor.yml']
+permissions:
+  contents: read
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: src/supervisor
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.3'
+          cache: false
+      - if: runner.os == 'Linux'
+        run: go test -race ./...
+      - if: runner.os == 'Windows'
+        run: go test ./...
+      - run: go vet ./...
+      - run: go build -o "$RUNNER_TEMP/store-ops-supervisor" ./cmd/store-ops-supervisor
+      - if: runner.os == 'Linux'
+        run: GOOS=windows GOARCH=amd64 go build -o "$RUNNER_TEMP/store-ops-supervisor.exe" ./cmd/store-ops-supervisor

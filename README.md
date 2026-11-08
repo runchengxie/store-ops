@@ -80,4 +80,5 @@ AGPL-3.0. See [LICENSE](docs/license). Upstream attribution and existing license
 
 - [Store status home](docs/store-status-home.md)
 
+- [Optional Go task supervisor](docs/go-supervisor.md)
 - [Operational knowledge and checks](docs/operational-knowledge.md)

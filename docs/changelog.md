@@ -8,6 +8,7 @@
 
 ## 2026-11-08
 
+- Add an optional durable Go supervisor for fixed read-only eMAG workers, with bounded concurrency, cooperative cancellation, receipt reconciliation and an explicit live-account binding. Retain Python business processing, credentials and authoritative pause controls.
 - Add an administrator Insights page with private revision-cited training search, snapshot-bound suggestions, bounded XLSX preflight and explicit promotion contribution scenarios. Owner-only local imports and read-scoped MCP retrieval preserve historical conflicts; no marketplace writes.
 
 - Document independent supplier/browser tools, observed versions and Agent-mediated evidence workflows. Add bilingual supplier research guidance; no application integration, automatic registration or marketplace permission is added.

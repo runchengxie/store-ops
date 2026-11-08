@@ -5,6 +5,7 @@ import sqlite3
 from app.services import store_artifacts
 
 current_store: ContextVar[str | None] = ContextVar('automation_store', default=None)
+current_cancel: ContextVar = ContextVar('automation_job_cancel', default=None)
 
 
 class Paused(RuntimeError):
@@ -67,6 +68,9 @@ def set_paused(store_id, paused, revision, actor):
 
 
 def checkpoint():
+    cancel = current_cancel.get()
+    if cancel is not None and cancel():
+        raise Paused('Automatic monitoring job cancelled')
     store_id = current_store.get()
     if store_id is not None and view(store_id)['paused']:
         raise Paused('Automatic monitoring paused')
