@@ -55,5 +55,6 @@
   "pausing": "Pausing takeover",
   "pausedAction": "Automatic monitoring is paused. Click to resume.",
   "pausingAction": "Waiting for the current task to stop safely.",
-  "controlError": "Could not change monitoring. Check the connection and try again."
+  "controlError": "Could not change monitoring. Check the connection and try again.",
+  "insights": "Operational assistance"
 }

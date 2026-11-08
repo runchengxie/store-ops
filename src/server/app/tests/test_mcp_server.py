@@ -229,3 +229,18 @@ def test_last_used_is_tracked(api):
     assert tokens.listing()[0]["last_used_at"] is None
     _rpc(client, "ping", token=row["token"])
     assert tokens.listing()[0]["last_used_at"] is not None
+
+
+def test_emag_private_knowledge_read_and_arguments(api, monkeypatch):
+    client, tokens, mcp = api
+    from app.services import emag_knowledge
+    monkeypatch.setattr(emag_knowledge, 'search', lambda query, limit: {
+        'available': False, 'results': [], 'query': query, 'limit': limit})
+    token = tokens.issue('knowledge reader')['token']
+    assert mcp.TOOLS['ivyea_emag_knowledge_search']['scope'] == 'read'
+    params = {'name': 'ivyea_emag_knowledge_search', 'arguments': {'query': '变体'}}
+    response = _rpc(client, 'tools/call', token=token, params=params)
+    assert response.json()['result']['isError'] is False
+    for args in ({'query': 'x', 'path': '/private'}, {'query': ' '}, {'query': 'x', 'limit': True}, {'query': 'x', 'limit': 21}):
+        params['arguments'] = args
+        assert _rpc(client, 'tools/call', token=token, params=params).json()['result']['isError'] is True

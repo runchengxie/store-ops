@@ -55,5 +55,6 @@
   "pausing": "正在暂停接管",
   "pausedAction": "自动监控已暂停，点击继续。",
   "pausingAction": "等待当前任务安全停止。",
-  "controlError": "暂时无法更改监控状态，请检查连接后重试。"
+  "controlError": "暂时无法更改监控状态，请检查连接后重试。",
+  "insights": "运营辅助"
 }

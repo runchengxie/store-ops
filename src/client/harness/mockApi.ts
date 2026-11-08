@@ -1,3 +1,4 @@
+import { insightsReply } from './insightsFixture';
 import { platformReply } from './platformFixture';
 import {researchReply} from './researchFixture';
 import clearanceFixture from './clearanceFixture.json';
@@ -1350,6 +1351,8 @@ export function installMockApi(): void {
     const full = (config.baseURL || "/api").replace(/^\/api/, "") + (config.url || "");
     ((window as any).__harnessRequests ||= []).push(full);
     if(full==='/operations/stores/second-ro/overview'&&new URLSearchParams(location.search).get('wbcase')==='multi')await new Promise(resolve=>setTimeout(resolve,400));
+    const insights = await insightsReply(full, config.method, config.data, config.params);
+    if (insights !== null) return {...reply(config),data:insights};
     const platform = platformReply(full, config.method, config.data);
     if (platform !== null) {if(full.endsWith('/control')&&(window as any).__controlResponseDelay)await new Promise(resolve=>setTimeout(resolve,(window as any).__controlResponseDelay));return { ...reply(config), data: platform };}
     const statusCase=new URLSearchParams(location.search).get('statuscase');
