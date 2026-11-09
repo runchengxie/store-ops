@@ -47,7 +47,8 @@ def _counts(evidence, prefix, window, start, end):
         return result
     window_start, window_end = _aware(window.get('start')), _aware(window.get('end'))
     dates = [_aware(row.get('date')) for row in rows]
-    if (not window_start or not window_end or 'unverified' in str(window.get('timezone_note', '')).lower()
+    if (window.get('timezone_verified') is not True or not window_start or not window_end
+            or 'unverified' in str(window.get('timezone_note', '')).lower()
             or any(d is None for d in dates)):
         return result
     previous = start - (end - start)  # Calendar-aware local midnight arithmetic.

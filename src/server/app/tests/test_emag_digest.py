@@ -16,7 +16,8 @@ def snapshot():
             'limitations': [], 'coverage': ['order/read types 2 and 3', 'rma/read types 2 and 3'],
             'data': {'offers': [{'id': 1, 'general_stock': 3}, {'id': 2}],
                      'commercial_summary': {'window': {'start': '2026-10-10T00:00:00Z',
-                                                       'end': '2026-11-09T08:00:00Z', 'timezone_note': 'verified UTC'}},
+                                                       'end': '2026-11-09T08:00:00Z', 'timezone_note': 'verified UTC',
+                                                       'timezone_verified': True}},
                      'commercial_evidence': {'orders_fbe': [{'id': 1, 'date': '2026-11-08T12:00:00Z'}],
                                              'orders_seller': [], 'returns_fbe': [], 'returns_seller': []}}}
 
@@ -69,6 +70,24 @@ def test_incomplete_window_does_not_claim_complete_week_or_comparison():
     r = digest.build(s, 'weekly', NOW)
     assert r['metrics']['orders']['current'] is None
     assert r['metrics']['orders']['previous'] is None
+
+
+@pytest.mark.parametrize('note', [None, 'unknown', 'not verified', 'UTC'])
+def test_absence_of_negative_note_is_not_positive_window_verification(note):
+    s = snapshot()
+    window = s['data']['commercial_summary']['window']
+    window.pop('timezone_verified')
+    window['timezone_note'] = note
+    r = digest.build(s, 'daily', NOW)
+    assert r['metrics']['orders']['current'] is None
+    assert r['metrics']['orders']['previous'] is None
+
+
+@pytest.mark.parametrize('verified', [False, 'true', 1])
+def test_verification_marker_requires_explicit_boolean_true(verified):
+    s = snapshot()
+    s['data']['commercial_summary']['window']['timezone_verified'] = verified
+    assert digest.build(s, 'daily', NOW)['metrics']['orders']['current'] is None
 
 
 def test_conflicting_duplicate_identity_does_not_produce_a_count():

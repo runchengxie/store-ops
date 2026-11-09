@@ -16,7 +16,11 @@ observation, not historical daily/weekly stock or verified sales.
 
 Order and return **record** counts include cancelled and other statuses. Counts
 for a period and its preceding period require explicit, aware source dates and
-a verified collection window covering that period. Repeated identities are
+a verified collection window covering that period. A trusted producer must
+explicitly set the boolean `commercial_summary.window.timezone_verified: true`
+after independently verifying the source filter contract; a missing/negative
+note is not verification, and changing this flag alone cannot verify data.
+Repeated identities are
 deduplicated; inconsistent identities make the count unavailable. The current
 collector labels its API filter timezone unverified and normally saves naive
 order dates. Such snapshots show **unavailable period counts** and separately
