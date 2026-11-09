@@ -18,6 +18,7 @@ git log 记得住「改了什么」，记不住「为什么不选另一条路」
 
 | 编号 | 决策 | 日期 |
 |---|---|---|
+| 0063 | [Evidence-bound Feishu reports](0063-feishu-periodic-reports.md) | 2026-11-09 |
 | 0062 | [Independent browser-assisted checks](0062-browser-assisted-checks.md) | 2026-11-09 |
 | 0059 | [Independent external tools](0059-independent-external-tools.md) | 2026-11-08 |
 | 0057 | [eMAG-only platform core](0057-emag-only-platform-core.md) | 2026-11-08 |

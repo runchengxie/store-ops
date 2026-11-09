@@ -2,6 +2,8 @@
 
 [英文权威版本](../../README.md)
 
+[飞书经营日报与周报](feishu-reports.md)
+
 [项目网站与文档](https://runchengxie.github.io/store-ops/zh-CN/)
 
 [eMAG 交互演示](https://runchengxie.github.io/store-ops/demo/) · 使用虚构数据，刷新后重置。

@@ -81,4 +81,5 @@ AGPL-3.0. See [LICENSE](docs/license). Upstream attribution and existing license
 - [Store status home](docs/store-status-home.md)
 
 - [Optional Go task supervisor](docs/go-supervisor.md)
+- [Daily and weekly Feishu reports](docs/feishu-reports.md)
 - [Operational knowledge and checks](docs/operational-knowledge.md)
