@@ -185,6 +185,8 @@ jobs:
       - name: Dependency security audit
         working-directory: src/client
         run: npm audit --registry=https://registry.npmjs.org
+      - name: Browser reader contracts
+        run: node scripts/browser-fbe-reader.test.mjs
       - name: Typecheck
         working-directory: src/client
         run: npm run typecheck

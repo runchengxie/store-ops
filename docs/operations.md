@@ -46,3 +46,5 @@ The repository currently has no configured coverage threshold, dedicated securit
 See [maintenance-audit.md](maintenance-audit.md) for the inspected commit/worktree context, findings, checks that ran and checks not executed.
 
 From the repository root, `python scripts/check-docs.py` checks local file links in the maintained entry documents. It does not validate external URLs or heading anchors.
+
+[Browser-assisted FBE checks](browser-checks.md)

@@ -6,6 +6,10 @@
 
 ---
 
+## 2026-11-09
+
+- Add fixed read-only FBE page checks with durable verification/login waits, versioned manual resume, separate source timestamps and a compact workbench notice. An optional existing-supervisor completion hook keeps browser waits independent of API monitoring; no marketplace writes.
+
 ## 2026-11-08
 
 - Add an optional durable Go supervisor for fixed read-only eMAG workers, with bounded concurrency, cooperative cancellation, receipt reconciliation and an explicit live-account binding. Retain Python business processing, credentials and authoritative pause controls.

@@ -1,4 +1,5 @@
 """Durable per-store automatic monitoring intent and cooperative checkpoints."""
+from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import datetime, timezone
 import sqlite3
@@ -74,3 +75,16 @@ def checkpoint():
     store_id = current_store.get()
     if store_id is not None and view(store_id)['paused']:
         raise Paused('Automatic monitoring paused')
+
+
+@contextmanager
+def publication_guard(store_id):
+    """Serialize a final publication with acknowledged monitoring pause changes."""
+    conn = _connect(store_id)
+    try:
+        conn.execute('BEGIN IMMEDIATE')
+        paused = bool(conn.execute('SELECT paused FROM control WHERE id=1').fetchone()[0])
+        yield paused
+        conn.commit()
+    finally:
+        conn.close()

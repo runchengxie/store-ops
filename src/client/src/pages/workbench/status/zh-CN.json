@@ -56,5 +56,21 @@
   "pausedAction": "自动监控已暂停，点击继续。",
   "pausingAction": "等待当前任务安全停止。",
   "controlError": "暂时无法更改监控状态，请检查连接后重试。",
-  "insights": "运营辅助"
+  "insights": "运营辅助",
+  "browserStart": "核对 FBE 库存",
+  "browserQueued": "FBE 库存核对已排队",
+  "browserRunning": "核对 FBE 库存中",
+  "browserVerification": "FBE 库存核对需要在 Edge 完成验证",
+  "browserLogin": "请在 Edge 登录 eMAG 后继续核对",
+  "browserUnavailable": "FBE 库存核对等待浏览器连接",
+  "browserRetry": "FBE 库存页面尚未加载完成",
+  "browserReview": "FBE 库存核对需要再检查一下",
+  "browserPaused": "FBE 库存核对已暂停",
+  "browserComplete": "已核对 FBE 库存页面",
+  "browserContinue": "已处理，继续",
+  "browserAgain": "再次核对",
+  "browserRetryAction": "重试核对",
+  "browserError": "暂时无法继续，请刷新后重试。",
+  "browserCoverage": "仅覆盖页面可见商品",
+  "browserSaved": "上次 FBE 核对：{time}"
 }

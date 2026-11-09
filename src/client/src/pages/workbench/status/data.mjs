@@ -30,3 +30,11 @@ export function mergeMonitoringControl(current,incoming){
  if(!validMonitoringControl(incoming))throw Error('Invalid control acknowledgement');
  return validMonitoringControl(current)&&current.revision>incoming.revision?current:incoming;
 }
+
+/** Browser assistance never changes the main API monitoring state. */
+export function browserNotice(task,store){
+ if(!task||task.store_id!==store||task.kind!=='fbe_inventory'||!Number.isInteger(task.revision)||task.revision<0||!/^[a-f0-9]{32}$/.test(task.task_id))return null;
+ const keys={queued:'browserQueued',running:'browserRunning',waiting_verification:'browserVerification',waiting_login:'browserLogin',waiting_browser:'browserUnavailable',waiting_retry:'browserRetry',needs_review:'browserReview',paused:'browserPaused',complete:'browserComplete'};
+ const message=keys[task.state];if(!message)return null;
+ return {message,action:task.state==='running'?null:['waiting_verification','waiting_login'].includes(task.state)?'browserContinue':task.state==='complete'?'browserAgain':'browserRetryAction'};
+}

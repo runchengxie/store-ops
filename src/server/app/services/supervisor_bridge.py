@@ -184,4 +184,7 @@ def run(store_id, job_id, *, run_fn=None, collect_fn=None):
         finally:
             automation_control.current_cancel.reset(token)
         _write(_path(job_id), record)
+        if record['status'] == 'complete':
+            from app.services import browser_tasks
+            browser_tasks.schedule(store_id)
         return record

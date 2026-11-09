@@ -1,12 +1,12 @@
 import {useEffect,useState} from 'react';
 import {Link} from 'react-router-dom';
 import {ArrowUpRight,ChevronRight,Pause,SlidersHorizontal} from 'lucide-react';
-import {deriveStatus} from './data.mjs';
+import {deriveStatus,browserNotice} from './data.mjs';
 import {resolveStatusLocale,withStatusLanguage} from './locale.mjs';
 import en from './en.json';import zh from './zh-CN.json';
 import './status.css';
-type Props={active?:boolean;data:any;job:any;stores:{store_id:string}[];store:string;onStore:(v:string)=>void;loading:boolean;error:string;onRefresh:()=>void;demo?:boolean;onSettings?:()=>void;onLogout?:()=>void;canInspect?:boolean;onControl?:(paused:boolean)=>void;controlPending?:boolean;controlError?:string};
-export default function StatusHome({data,job,stores,store,onStore,loading,error,onRefresh,demo=false,onSettings,onLogout,canInspect=true,active=true,onControl,controlPending=false,controlError=''}:Props){
+type Props={active?:boolean;data:any;job:any;stores:{store_id:string}[];store:string;onStore:(v:string)=>void;loading:boolean;error:string;onRefresh:()=>void;demo?:boolean;onSettings?:()=>void;onLogout?:()=>void;canInspect?:boolean;onControl?:(paused:boolean)=>void;controlPending?:boolean;controlError?:string;onBrowserCheck?:()=>void;browserPending?:boolean;browserError?:string};
+export default function StatusHome({data,job,stores,store,onStore,loading,error,onRefresh,demo=false,onSettings,onLogout,canInspect=true,active=true,onControl,controlPending=false,controlError='',onBrowserCheck,browserPending=false,browserError=''}:Props){
  const [locale,setLocale]=useState<'en'|'zh-CN'>(()=>{let saved=null;try{saved=localStorage.getItem('store.status.locale');}catch{}return resolveStatusLocale(location.search,saved,navigator.languages||[navigator.language]);});
  useEffect(()=>{document.documentElement.lang=locale;},[locale]);
  const c:Record<string,string>=locale==='en'?en:zh;const t=(key:string,values:Record<string,string|number>={})=>Object.entries(values).reduce((s,[k,v])=>s.replaceAll('{'+k+'}',String(v)),c[key]||key);
@@ -14,6 +14,7 @@ export default function StatusHome({data,job,stores,store,onStore,loading,error,
  useEffect(()=>{const media=window.matchMedia('(prefers-reduced-motion: reduce)');const update=()=>setReduced(media.matches);const visibility=()=>{setVisible(!document.hidden);setNow(Date.now());};media.addEventListener('change',update);document.addEventListener('visibilitychange',visibility);return()=>{media.removeEventListener('change',update);document.removeEventListener('visibilitychange',visibility);};},[]);
  useEffect(()=>{setIndex(0);},[store]);
  useEffect(()=>{if(!visible||!active)return;setNow(Date.now());const timer=setInterval(()=>setNow(Date.now()),10000);return()=>clearInterval(timer);},[visible,active]);
+ const browser=browserNotice(data?.browser_check,store);
  const slides=['readProducts','checkPrices','checkStock','prepareReview'];
  useEffect(()=>{if(!demo||paused||reduced||!visible||!active||!data)return;const timer=setInterval(()=>setIndex(i=>(i+1)%slides.length),6000);return()=>clearInterval(timer);},[paused,reduced,visible,active,!!data,demo,slides.length]);
  const result=deriveStatus(data,job,Date.now());const state=error?'offline':loading&&!data?'loading':result.state;
@@ -40,6 +41,12 @@ export default function StatusHome({data,job,stores,store,onStore,loading,error,
   </section>
   {data&&!error&&<section className="status-evidence"><div className="status-metrics">{(['products','issues','stock'] as const).map(key=><article key={key}><p>{t(key)}</p><strong aria-label={result.metrics[key]===null?t('unknown'):undefined}>{format(result.metrics[key])}</strong><span className="status-metric-rule"/></article>)}</div>
 
+   {!demo&&data.browser_check_available&&<div className="status-browser" role="status">
+    {browser&&<p>{t(browser.message)}</p>}
+    {data.browser_check?.last_success_at&&<small>{t('browserSaved',{time:new Intl.DateTimeFormat(locale,{dateStyle:'short',timeStyle:'short',timeZone:data.timezone||'UTC'}).format(new Date(data.browser_check.last_success_at))})} · {t('browserCoverage')}</small>}
+    {(!browser||browser.action)&&onBrowserCheck&&<button type="button" className="status-browser-action" disabled={browserPending||!!control?.paused} onClick={onBrowserCheck}>{t(browser?.action||'browserStart')}</button>}
+    {browserError&&<p role="alert">{t('browserError')}</p>}
+   </div>}
    {!demo&&<p className="status-source">{t('lastChecked')} {date}{result.stale&&<span>{t('staleBadge')}</span>}</p>}
   </section>}
   {!data&&!loading&&!error&&<p className="status-empty">{t('emptyHelp')}</p>}

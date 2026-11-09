@@ -56,5 +56,21 @@
   "pausedAction": "Automatic monitoring is paused. Click to resume.",
   "pausingAction": "Waiting for the current task to stop safely.",
   "controlError": "Could not change monitoring. Check the connection and try again.",
-  "insights": "Operational assistance"
+  "insights": "Operational assistance",
+  "browserStart": "Check FBE inventory",
+  "browserQueued": "FBE inventory check is queued",
+  "browserRunning": "Checking FBE inventory",
+  "browserVerification": "FBE inventory check needs verification in Edge",
+  "browserLogin": "Sign in to eMAG in Edge to continue the FBE check",
+  "browserUnavailable": "FBE inventory check is waiting for the browser",
+  "browserRetry": "FBE inventory has not finished loading",
+  "browserReview": "FBE inventory check needs another look",
+  "browserPaused": "FBE inventory check is paused",
+  "browserComplete": "FBE inventory page checked",
+  "browserContinue": "I’ve verified; continue",
+  "browserAgain": "Check again",
+  "browserRetryAction": "Retry check",
+  "browserError": "Could not continue. Refresh and try again.",
+  "browserCoverage": "Visible page only",
+  "browserSaved": "Last FBE check: {time}"
 }

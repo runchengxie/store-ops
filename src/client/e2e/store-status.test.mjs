@@ -15,3 +15,15 @@ test('a failed check older than the current information does not override it',()
 test('paused monitoring requires a consistent server acknowledgement',async()=>{const {validMonitoringControl}=await import('../src/pages/workbench/status/data.mjs');assert.ok(validMonitoringControl({state:'paused',paused:true,revision:1}));assert.ok(validMonitoringControl({state:'pausing',paused:true,revision:1}));assert.equal(validMonitoringControl({state:'paused',paused:false,revision:1}),false);assert.equal(validMonitoringControl({state:'paused',paused:true,revision:-1}),false);assert.equal(validMonitoringControl(null),false);});
 
 test('late pause acknowledgement cannot overwrite a newer resume',async()=>{const {mergeMonitoringControl}=await import('../src/pages/workbench/status/data.mjs');const resumed={paused:false,state:'enabled',revision:2};assert.equal(mergeMonitoringControl(resumed,{paused:true,state:'paused',revision:1}),resumed);assert.equal(mergeMonitoringControl({paused:true,state:'pausing',revision:1},{paused:true,state:'paused',revision:1}).state,'paused');});
+
+test('browser waits stay separate from API activity and ignore other stores',async()=>{
+ const {browserNotice}=await import('../src/pages/workbench/status/data.mjs');
+ const task={task_id:'a'.repeat(32),store_id:'own',kind:'fbe_inventory',state:'waiting_verification',revision:3};
+ assert.equal(browserNotice(task,'own').message,'browserVerification');
+ assert.equal(browserNotice(task,'own').action,'browserContinue');
+ assert.equal(browserNotice(task,'other'),null);
+ assert.equal(browserNotice({...task,state:'unknown'},'own'),null);
+ assert.equal(browserNotice({...task,revision:-1},'own'),null);
+ assert.equal(browserNotice({...task,state:'running'},'own').action,null);
+ assert.equal(deriveStatus(data,{store_id:'own',status:'running',started_at:'2026-11-07T23:59:50Z'},now).state,'working');
+});

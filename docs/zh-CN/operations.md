@@ -46,3 +46,5 @@ CI 将后端 suite 和平台矩阵分开，后端测试矩阵覆盖 Linux 和 Wi
 检查范围、实际结果及未执行项见[英文审计记录](../maintenance-audit.md)。
 
 在仓库根目录运行 `python scripts/check-docs.py`，检查维护入口文档中的本地文件链接。该检查不验证外部网址或标题锚点。
+
+[浏览器辅助 FBE 核对](browser-checks.md)

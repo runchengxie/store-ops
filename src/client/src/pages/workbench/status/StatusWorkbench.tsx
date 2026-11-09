@@ -7,8 +7,19 @@ type Props={demo?:boolean;onSettings?:()=>void;onLogout?:()=>void;canInspect?:bo
 export default function StatusWorkbench({demo=false,...props}:Props){
  const [query]=useSearchParams();const location=useLocation();const enabled=location.pathname==='/workbench';
  const [stores,setStores]=useState<{store_id:string}[]>([]),[store,setStore]=useState(query.get('store')||''),[data,setData]=useState<any>(null),[job,setJob]=useState<any>(null),[listError,setListError]=useState(''),[error,setError]=useState(''),[loading,setLoading]=useState(true),[refresh,setRefresh]=useState(0);
+ const browserInFlight=useRef(false);
+ const [browserPending,setBrowserPending]=useState(false),[browserError,setBrowserError]=useState('');
  const generation=useRef(0);const controlInFlight=useRef(false);
  const [controlPending,setControlPending]=useState(false),[controlError,setControlError]=useState('');
+ async function checkBrowser(){
+  if(browserInFlight.current||!data||data.store_id!==store)return;
+  const epoch=generation.current,selected=store;browserInFlight.current=true;setBrowserPending(true);setBrowserError('');
+  try{const r=await api.post(`/operations/stores/${encodeURIComponent(selected)}/browser-check`,{revision:data.browser_check?.revision??null});
+   if(r.data?.store_id!==selected)throw Error('Invalid task');
+   if(epoch===generation.current){setData((current:any)=>current?.store_id===selected?{...current,browser_check:r.data}:current);setRefresh(v=>v+1);}
+  }catch{if(epoch===generation.current)setBrowserError('unavailable');}
+  finally{browserInFlight.current=false;setBrowserPending(false);}
+ }
  async function changeControl(paused:boolean){
   if(controlInFlight.current||!data?.control||data.store_id!==store)return;
   const epoch=generation.current;const selected=store;controlInFlight.current=true;setControlPending(true);setControlError('');
@@ -19,7 +30,7 @@ export default function StatusWorkbench({demo=false,...props}:Props){
   finally{controlInFlight.current=false;setControlPending(false);}
  }
  useEffect(()=>{let alive=true;setLoading(true);setListError('');api.get('/operations/stores').then(r=>{if(!alive)return;if(!Array.isArray(r.data))throw Error('Invalid store list');const rows=r.data.filter((s:any)=>typeof s?.store_id==='string');setStores(rows);setStore(s=>chooseStore(rows,s));if(!rows.length){setData(null);setJob(null);setLoading(false);}}).catch(()=>{if(alive){setStores([]);setStore('');setData(null);setJob(null);setListError('unavailable');setLoading(false);}});return()=>{alive=false;};},[refresh]);
- useEffect(()=>{const epoch=++generation.current;let active=true;let timer:ReturnType<typeof setTimeout>|undefined;let pending=false;const controllers=new Set<AbortController>();setData(null);setJob(null);setError('');setControlError('');
+ useEffect(()=>{const epoch=++generation.current;let active=true;let timer:ReturnType<typeof setTimeout>|undefined;let pending=false;const controllers=new Set<AbortController>();setData(null);setJob(null);setError('');setControlError('');setBrowserError('');
   async function read(){if(!enabled||!store||!active||pending||document.hidden)return;pending=true;setLoading(true);const controller=new AbortController();controllers.add(controller);try{const response=await api.get(`/operations/stores/${encodeURIComponent(store)}/overview`,{signal:controller.signal});if(!active||epoch!==generation.current)return;
    const view=response.data;if(view?.control&&!validMonitoringControl(view.control))throw Error('Invalid control state');if(view?.store_id!==store||typeof view.platform!=='string'||!view.metrics||!Number.isInteger(view.metrics.products)||view.metrics.products<0||!Number.isInteger(view.metrics.issues)||view.metrics.issues<0)throw Error('Invalid evidence');setData((current:any)=>current?.store_id===view.store_id&&current.control?.revision>view.control?.revision?{...view,control:current.control}:view);setJob(view.collection||null);setError('');
   }catch{if(active&&epoch===generation.current){setData(null);setJob(null);setError('unavailable');}}finally{controllers.delete(controller);pending=false;if(active&&epoch===generation.current){setLoading(false);timer=setTimeout(()=>void read(),30000);}}}
@@ -37,5 +48,5 @@ export default function StatusWorkbench({demo=false,...props}:Props){
   }catch{if(alive&&epoch===generation.current)setControlError('unavailable');}finally{pending=false;}},2000);
   return()=>{alive=false;clearInterval(timer);controller.abort();};
  },[enabled,store,data?.store_id,data?.control?.state]);
- return <StatusHome {...props} active={enabled} demo={demo} data={data?.store_id===store?data:null} job={job} stores={stores} store={store} onStore={setStore} loading={loading} error={listError||error} onRefresh={()=>setRefresh(v=>v+1)} onControl={changeControl} controlPending={controlPending} controlError={controlError}/>;
+ return <StatusHome {...props} active={enabled} demo={demo} data={data?.store_id===store?data:null} job={job} stores={stores} store={store} onStore={setStore} loading={loading} error={listError||error} onRefresh={()=>setRefresh(v=>v+1)} onControl={changeControl} controlPending={controlPending} controlError={controlError} onBrowserCheck={checkBrowser} browserPending={browserPending} browserError={browserError}/>;
 }

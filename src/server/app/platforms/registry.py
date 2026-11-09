@@ -37,5 +37,5 @@ def overview(store_id):
         raise FileNotFoundError('Store is missing or ambiguous')
     adapter=get_adapter(matches[0]['platform'])
     require_capability(adapter.descriptor.platform_id,'overview')
-    from app.services import automation_control
-    return {**adapter.overview(store_id), 'control':automation_control.view(store_id)}
+    from app.services import automation_control, browser_tasks
+    return {**adapter.overview(store_id), 'control':automation_control.view(store_id), 'browser_check':browser_tasks.view(store_id), 'browser_check_available':browser_tasks.available(store_id)}
