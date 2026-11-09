@@ -202,9 +202,17 @@ Set `"image_enabled": true` in the existing private delivery configuration to se
 one PNG long image after each successful text digest. The default is false. No
 change to the bot application, recipient or source commands is needed after both
 source and delivery installations have been updated. New source digests include a
-bounded `visual` payload derived from the same saved snapshot. Already delivered legacy text reports with no `visual` field return
-`image_status: skipped_legacy` without rendering, uploading or sending, and the
-CLI exits successfully. Existing text receipts are preserved; old periods are
+bounded `visual` payload derived from the same saved snapshot. For a one-time migration, optionally set `image_legacy_before` to an explicit
+timezone-aware timestamp at the moment image mode is first enabled. Keep this
+cutoff fixed; do not advance it on later deployments. Invalid/naive/future
+cutoffs are rejected before external I/O. Only confirmed text deliveries whose
+controller-persisted `created_at` is strictly before that cutoff, with no
+`visual` field or explicit omission marker, return `image_status: skipped_legacy`
+without rendering, uploading or sending, and the CLI exits successfully.
+Without an explicit cutoff, missing visual data is `unavailable`. The source
+report generation time is never used to classify a legacy delivery. Fresh
+reports that omit optional content to fit the serialization budget remain
+failures rather than being silently treated as old periods. Existing text receipts are preserved; old periods are
 not backfilled automatically. Use a new deliberate correction after updating
 the source to send a fresh text/image pair. An explicit invalid or omitted
 visual payload remains `unavailable` and is still a delivery failure.

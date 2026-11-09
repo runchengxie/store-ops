@@ -35,6 +35,8 @@ def validate_config(config):
         raise ValueError('image_enabled must be boolean')
     if config.get('font_path') is not None and (not isinstance(config['font_path'], str) or not Path(config['font_path']).is_absolute()):
         raise ValueError('font_path requires an absolute local path')
+    if 'image_legacy_before' in config and _aware(config['image_legacy_before']) is None:
+        raise ValueError('image_legacy_before requires an aware timestamp')
     _command(config['cli_command'])
     for kind in ('daily', 'weekly'):
         _command(config['source_commands'][kind])
@@ -107,6 +109,8 @@ def _receipt(row):
 
 def _run_text(config, now, kind=None, preview=False, *, correction_id=None):
     validate_config(config)
+    if 'image_legacy_before' in config and _aware(config['image_legacy_before']) > now:
+        raise ValueError('image_legacy_before cannot be in the future')
     if kind not in (None, 'daily', 'weekly'):
         raise ValueError('Unsupported report kind')
     if correction_id is not None:
@@ -201,12 +205,17 @@ def _deliver_image(config, now, receipt):
         if existing:
             return {**receipt,'image_status':'unknown' if existing[0]=='sending' else existing[0],
                     'image_message_id':existing[1]}
-        stored = conn.execute('SELECT payload FROM deliveries WHERE id=? AND status=?',(key,'delivered')).fetchone()
+        stored = conn.execute('SELECT payload,created_at FROM deliveries WHERE id=? AND status=?',(key,'delivered')).fetchone()
         if not stored:
             raise ValueError('Image requires confirmed text and retained source payload')
         report = json.loads(stored[0])['report']
         if 'visual' not in report:
-            return {**receipt,'image_status':'skipped_legacy','image_message_id':None}
+            cutoff = _aware(config.get('image_legacy_before'))
+            created = _aware(stored[1])
+            financial = report.get('reconciliation', {})
+            omission = not isinstance(financial, dict) or financial.get('status') == 'omitted_size_limit'
+            legacy = cutoff is not None and created is not None and created < cutoff <= now and not omission
+            return {**receipt,'image_status':'skipped_legacy' if legacy else 'unavailable','image_message_id':None}
         visual = report.get('visual')
         if (not isinstance(visual, dict) or visual.get('schema_version') != 1
                 or visual.get('snapshot_id') != report.get('snapshot_id')):
