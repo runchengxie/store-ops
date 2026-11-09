@@ -88,8 +88,10 @@ def _due(kind, now, zone):
     return local >= datetime.combine(monday, time(9, 10), local.tzinfo)
 
 
-def _key(config, kind, now):
+def _key(config, kind, now, correction_id=None):
     identity = [config[k] for k in ('app_id', 'recipient_open_id', 'store_id', 'timezone', 'locale')]
+    if correction_id is not None:
+        identity += ['correction', correction_id]
     return hashlib.sha256(json.dumps(identity + [kind, period(kind, now, config['timezone'])],
                                       sort_keys=True).encode()).hexdigest()[:48]
 
@@ -99,31 +101,53 @@ def _receipt(row):
             'message_id': row[2]}
 
 
-def run(config, now, kind=None, preview=False):
+def run(config, now, kind=None, preview=False, *, correction_id=None):
     validate_config(config)
     if kind not in (None, 'daily', 'weekly'):
         raise ValueError('Unsupported report kind')
+    if correction_id is not None:
+        from app.services.store_artifacts import validate_id
+        validate_id(correction_id)
+        if kind is None:
+            raise ValueError('Corrections require an explicit report kind')
     if not config['enabled'] and not preview:
         return []
     kinds = [kind] if kind else [k for k in ('daily', 'weekly') if _due(k, now, config['timezone'])]
     results = []
     for selected in kinds:
-        key = _key(config, selected, now)
+        key = _key(config, selected, now, correction_id)
+        def prepare():
+            report = _report(config, selected, now)
+            if correction_id is not None:
+                label = ('更正版：替代此前同一统计区间的报告。' if config['locale'] == 'zh-CN' else
+                         'Correction: replaces the earlier report for this same period.')
+                report = {**report, 'markdown': label + '\n\n' + report['markdown']}
+                if (len(report['markdown'].encode('utf-8')) > 16000
+                        or len(json.dumps(report, ensure_ascii=False, allow_nan=False).encode('utf-8')) > 32000):
+                    raise ValueError('Correction exceeds report bounds')
+            return report
         if preview:
-            results.append({'delivery_id': key, 'status': 'preview', 'report': _report(config, selected, now)})
+            results.append({'delivery_id': key, 'status': 'preview', 'report': prepare()})
             continue
         root = Path(config['state_dir'])
         root.mkdir(parents=True, exist_ok=True, mode=0o700)
         with sqlite3.connect(root / 'delivery.sqlite3', timeout=30) as conn:
             conn.execute('CREATE TABLE IF NOT EXISTS deliveries (id TEXT PRIMARY KEY, status TEXT NOT NULL, '
                          'message_id TEXT, created_at TEXT NOT NULL, finished_at TEXT, payload TEXT NOT NULL)')
+            original_key = _key(config, selected, now)
+            if correction_id is not None:
+                original = conn.execute('SELECT status,message_id FROM deliveries WHERE id=?', (original_key,)).fetchone()
+                if not original or original[0] != 'delivered' or not original[1]:
+                    raise ValueError('Correction requires a confirmed delivered original')
             existing = conn.execute('SELECT id,status,message_id FROM deliveries WHERE id=?', (key,)).fetchone()
             if existing:
                 results.append(_receipt(existing))
                 continue
-            report = _report(config, selected, now)
+            report = prepare()
             _verify_bot(config)
             payload = {'app_id': config['app_id'], 'recipient_open_id': config['recipient_open_id'], 'report': report}
+            if correction_id is not None:
+                payload.update(correction_id=correction_id, correction_of=original_key)
             # Commit intent before any submission. A crash leaves a terminal
             # unknown outcome: another process must never try this key again.
             conn.execute('BEGIN IMMEDIATE')

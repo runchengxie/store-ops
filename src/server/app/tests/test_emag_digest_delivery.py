@@ -149,3 +149,38 @@ def test_disabled_due_has_no_external_side_effects(configured):
     config['enabled'] = False
     assert delivery.run(config, NOW) == []
     assert sends(root) == []
+
+
+def test_explicit_correction_preserves_original_and_deduplicates_its_own_send(configured):
+    config, root = configured
+    original = delivery.run(config, NOW, kind='daily')[0]
+    corrected = delivery.run(config, NOW, kind='daily', correction_id='calendar-metrics')[0]
+    repeated = delivery.run(config, NOW, kind='daily', correction_id='calendar-metrics')[0]
+    assert corrected['status'] == repeated['status'] == 'delivered'
+    assert corrected['delivery_id'] != original['delivery_id']
+    assert repeated['delivery_id'] == corrected['delivery_id']
+    assert len(sends(root)) == 2
+    assert '更正版' in sends(root)[1]['text']
+    with sqlite3.connect(Path(config['state_dir']) / 'delivery.sqlite3') as conn:
+        records = [json.loads(row[0]) for row in conn.execute('SELECT payload FROM deliveries ORDER BY rowid')]
+    assert '更正版' not in records[0]['report']['markdown']
+    assert records[1]['correction_of'] == original['delivery_id']
+
+
+@pytest.mark.parametrize('state', ['missing', 'unknown'])
+def test_correction_cannot_resend_an_unconfirmed_original(configured, state):
+    config, root = configured
+    if state == 'unknown':
+        (root / 'mode').write_text('bad_json')
+        delivery.run(config, NOW, kind='daily')
+    before = len(sends(root))
+    with pytest.raises(ValueError):
+        delivery.run(config, NOW, kind='daily', correction_id='calendar-metrics')
+    assert len(sends(root)) == before
+
+
+def test_scheduled_invocation_cannot_enable_correction_mode(configured):
+    config, root = configured
+    with pytest.raises(ValueError):
+        delivery.run(config, NOW, correction_id='calendar-metrics')
+    assert sends(root) == []

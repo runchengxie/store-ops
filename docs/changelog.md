@@ -8,6 +8,7 @@
 
 ## 2026-11-09
 
+- Correct daily/weekly reports to show source-bound eMAG calendar-date counts, prior-period changes and capture-time order statuses without claiming a verified timezone. Add explicitly requested, deduplicated corrections for confirmed delivered reports; preserve original receipts and unknown-send protection.
 - Add source-labelled daily/weekly reports through an existing Lark CLI bot, with explicit app/recipient binding, durable send receipts and no automatic resend after uncertain outcomes. Unverified source dates remain unavailable period figures; no marketplace collection or writes are added.
 - Add fixed read-only FBE page checks with durable verification/login waits, versioned manual resume, separate source timestamps and a compact workbench notice. An optional existing-supervisor completion hook keeps browser waits independent of API monitoring; no marketplace writes.
 

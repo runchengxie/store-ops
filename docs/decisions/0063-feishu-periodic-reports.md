@@ -32,3 +32,17 @@ show captured-window context separately, and preserve stock/return/source
 limitations. Sales, revenue or profit require separately verified contracts.
 
 See [usage and recovery](../feishu-reports.md).
+
+## Correction: calendar date labels are useful without a verified offset
+
+The initial report builder withheld every period count for the current collector,
+making daily and weekly messages effectively the same window summary. Keep the
+verified-instant guard, but separately permit source-bound API calendar-label
+counts when the known naive window and all record dates are compatible and
+cover the complete requested period. Label this basis explicitly; do not set
+`timezone_verified` or rewrite historical snapshots. Independently check prior
+coverage and keep unknown values distinct from zero. A bounded private live
+read verified the API's date-filter results against saved record identities.
+
+Use manual, stable correction IDs to deliver corrected already-confirmed reports
+without deleting their original ledger entries or weakening unknown-send gates.

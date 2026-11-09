@@ -22,6 +22,90 @@ def snapshot():
                                              'orders_seller': [], 'returns_fbe': [], 'returns_seller': []}}}
 
 
+def calendar_snapshot():
+    s = snapshot()
+    s['data']['commercial_summary']['window'] = {
+        'start': '2026-10-11 01:00:02', 'end': '2026-11-09 01:00:02',
+        'timezone_note': 'UTC values sent as naive API filter strings; platform timezone unverified'}
+    s['data']['commercial_evidence']['orders_fbe'] = [
+        {'id': 1, 'date': '2026-11-08 12:00:00', 'status': 4},
+        {'id': 2, 'date': '2026-11-07 23:59:59', 'status': 0},
+        {'id': 3, 'date': '2026-11-04 00:00:00', 'status': 1},
+        {'id': 4, 'date': '2026-10-29 12:00:00', 'status': 5},
+        {'id': 5, 'date': '2026-11-09 00:00:00', 'status': 1}]
+    return s
+
+
+def test_api_calendar_dates_produce_daily_counts_without_claiming_verified_instants():
+    r = digest.build(calendar_snapshot(), 'daily', NOW, locale='zh-CN')
+    assert r['metrics']['orders']['current'] == 1
+    assert r['metrics']['orders']['previous'] == 1
+    assert r['metrics']['orders']['basis'] == 'platform_calendar'
+    assert r['date_basis'] == 'platform_calendar'
+    assert 'eMAG 平台日期' in r['markdown']
+    assert '订单状态' in r['markdown']
+    assert '时区尚未核实' in r['markdown']
+
+
+def test_weekly_calendar_counts_and_status_codes_use_creation_period():
+    s = calendar_snapshot()
+    s['data']['commercial_evidence']['returns_fbe'] = [
+        {'emag_id': 7, 'date': '2026-11-03 10:00:00', 'request_status': 7},
+        {'emag_id': 8, 'date': '2026-10-30 10:00:00', 'request_status': 3}]
+    r = digest.build(s, 'weekly', NOW)
+    orders, returns = r['metrics']['orders'], r['metrics']['returns']
+    assert (orders['current'], orders['previous'], orders['change']) == (3, 1, 2)
+    assert orders['current_statuses'] == {'4': 1, '0': 1, '1': 1}
+    assert (returns['current'], returns['previous']) == (1, 1)
+    assert returns['current_statuses'] == {'7': 1}
+    assert 'platform calendar' in r['markdown']
+
+
+@pytest.mark.parametrize('mutation', ['wrong_source', 'missing_coverage', 'mixed_date', 'missing_date', 'outside_window'])
+def test_calendar_counts_require_a_compatible_complete_source_contract(mutation):
+    s = calendar_snapshot()
+    if mutation == 'wrong_source':
+        s['source'] = 'synthetic-import'
+    elif mutation == 'missing_coverage':
+        s['coverage'] = ['offers only']
+    elif mutation == 'mixed_date':
+        s['data']['commercial_evidence']['orders_fbe'][0]['date'] = '2026-11-08T12:00:00Z'
+    elif mutation == 'missing_date':
+        s['data']['commercial_evidence']['orders_fbe'][0].pop('date')
+    elif mutation == 'outside_window':
+        s['data']['commercial_evidence']['orders_fbe'][0]['date'] = '2026-10-01 12:00:00'
+    r = digest.build(s, 'weekly', NOW)
+    assert r['metrics']['orders']['current'] is None
+
+
+def test_calendar_window_coverage_distinguishes_zero_from_unknown():
+    s = calendar_snapshot()
+    s['data']['commercial_evidence']['orders_fbe'] = []
+    s['data']['commercial_summary']['window']['start'] = '2026-11-07 01:00:00'
+    r = digest.build(s, 'daily', NOW)
+    assert r['metrics']['orders']['current'] == 0
+    assert r['metrics']['orders']['previous'] is None
+
+
+def test_calendar_dates_on_fall_dst_day_are_counted_without_offset_assignment():
+    s = calendar_snapshot()
+    s['captured_at'] = '2026-10-26T09:00:00Z'
+    s['data']['commercial_summary']['window']['end'] = '2026-10-26 01:00:00'
+    s['data']['commercial_evidence']['orders_fbe'] = [
+        {'id': 1, 'date': '2026-10-25 03:30:00', 'status': 4}]
+    r = digest.build(s, 'daily', datetime(2026, 10, 26, 10, tzinfo=timezone.utc))
+    assert r['metrics']['orders']['current'] == 1
+    assert r['metrics']['orders']['basis'] == 'platform_calendar'
+
+
+def test_malformed_status_text_is_not_copied_into_the_delivered_json():
+    s = calendar_snapshot()
+    s['data']['commercial_evidence']['orders_fbe'][0]['status'] = 'private-customer-text'
+    r = digest.build(s, 'daily', NOW)
+    assert r['metrics']['orders']['current_statuses'] == {'unknown': 1}
+    assert 'private-customer-text' not in json.dumps(r)
+
+
 @pytest.mark.parametrize(('kind', 'now', 'start', 'end'), [
     ('daily', '2026-10-26T10:00:00+00:00', '2026-10-25', '2026-10-26'),
     ('weekly', '2026-11-09T10:00:00+00:00', '2026-11-02', '2026-11-09'),

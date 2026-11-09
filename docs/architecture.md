@@ -22,6 +22,11 @@ The inspected checkout has no `.gitmodules` and no gitlinks. The vendored Agent 
 
 `emag_business.collect` uses fixed RO read endpoints and projects selected fields. `publish` stores a versioned snapshot after complete collection. Sequential API reads are not an atomic marketplace view. Order timestamps, invoice dates and service periods have different meanings. Platform filter timezone interpretation remains unverified.
 
+Periodic reports may group compatible naive dates from the known collector by
+explicitly labelled platform calendar dates, checking source and full-period
+coverage without assigning an offset. This is separate from verified-instant
+reporting; see [report date bases](feishu-reports.md).
+
 The manual job reads or collects evidence, compares observations where a baseline exists, saves a source-bound report and publishes a receipt. A per-store lock prevents overlapping runs through this entry point. Collection failure keeps the prior snapshot. A process crash or storage failure may prevent a new receipt, so check its run ID and timestamp.
 
 Snapshots and reports are append-only through these APIs. Files are ordinary local files, not tamper-proof storage. `StoreSnapshot` has source, coverage, limitations and timezone-aware `captured_at`. Existing schema-version-1 snapshots remain compatible without rewriting old artifacts. Store/snapshot/report IDs and structured keys are not translated.

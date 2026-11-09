@@ -14,18 +14,32 @@ previous Monday through Sunday. The default business timezone is
 period, snapshot identity, capture time and freshness. Stock is a capture-time
 observation, not historical daily/weekly stock or verified sales.
 
-Order and return **record** counts include cancelled and other statuses. Counts
-for a period and its preceding period require explicit, aware source dates and
-a verified collection window covering that period. A trusted producer must
-explicitly set the boolean `commercial_summary.window.timezone_verified: true`
-after independently verifying the source filter contract; a missing/negative
-note is not verification, and changing this flag alone cannot verify data.
-Repeated identities are
-deduplicated; inconsistent identities make the count unavailable. The current
-collector labels its API filter timezone unverified and normally saves naive
-order dates. Such snapshots show **unavailable period counts** and separately
-labelled captured-window totals. They do not imply yesterday/week sales or a
-verified sales trend. Reporting does not silently repair this source contract.
+Order and return **record** counts include cancelled and other statuses.
+The report distinguishes two date bases:
+
+- **Platform calendar dates** (`date_basis: platform_calendar`): the existing
+  complete RO collector's naive record dates are grouped directly under the
+  same naive date filters that selected them. Its official source URL, resource
+  coverage and known collector window contract must match; all records must
+  have compatible dates inside that window. Coverage of the full current and
+  previous periods is checked independently. No UTC offset is assigned and no
+  verified Romania-time instants are claimed. Scheduling and capture timestamps
+  still use the configured timezone.
+- **Verified timezone instants** (`verified_timezone`): aware source dates plus
+  a covering aware window require explicit boolean
+  `commercial_summary.window.timezone_verified: true` from a trusted producer
+  that has independently verified the filter contract. Missing/negative notes
+  are not verification, and changing the flag alone cannot verify data.
+
+Repeated identities are deduplicated. Conflicting identities, mixed/missing
+dates, unsupported source contracts or incomplete coverage keep the affected
+figures unavailable; they do not become zero. The current collector normally
+uses the first basis. Window totals remain separate from period figures.
+Order statuses are those observed at capture, grouped by the original order
+date: finalized does not mean settled profit or an order finalized that day.
+Return counts use request insertion date, not a completed-refund date.
+See the official [eMAG API contracts](https://marketplace-api.emag.ro/api-doc)
+for `OrderSave.date`, order date filters, RMA filters and the separate status codes.
 
 Missing inventory is unknown, never zero. Data older than 24 hours is marked
 stale. Reports include up to three deterministic checks for freshness, zero or
@@ -130,5 +144,18 @@ fixed configuration/source/preflight failure. Inspect the private ledger and
 CLI/environment before changing anything. Reconcile an unknown result against
 the target conversation and its delivery key/message content. Do not delete a
 row to force a resend; a deliberate corrected resend is a separately reviewed
-operation. Disable only the reporting timer or set `enabled: false` to stop
+operation. For an explicitly authorized correction to a confirmed delivered
+period, use a stable correction ID and explicit kind:
+
+```bash
+python -m app.emag_digest_delivery --config /private/config/digest.json --kind daily --correction-id calendar-metrics --preview
+python -m app.emag_digest_delivery --config /private/config/digest.json --kind daily --correction-id calendar-metrics
+```
+
+The new message is visibly marked as a correction and links back to the original
+delivery in the ledger. Its original row/content is preserved. Repeating the
+same correction ID cannot resend it. Unknown or rejected originals are refused;
+scheduled mode cannot enable corrections. Preview remains read-only with
+respect to the delivery ledger, and does not establish that an original exists.
+Disable only the reporting timer or set `enabled: false` to stop
 new reports; preserve ledger history and existing collection tasks.
