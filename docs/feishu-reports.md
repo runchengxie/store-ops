@@ -11,7 +11,7 @@ collect from the marketplace, change an offer, or execute a suggested check.
 Daily reports describe the previous calendar day; weekly reports describe the
 previous Monday through Sunday. The default business timezone is
 `Europe/Bucharest`, including daylight saving changes. Every message states its
-period, snapshot identity, capture time and freshness. Stock is a capture-time
+inclusive business dates and last data update. Stock is a capture-time
 observation, not historical daily/weekly stock or verified sales.
 
 Order and return **record** counts include cancelled and other statuses.
@@ -47,6 +47,14 @@ unknown stock, and missing date evidence. These are review prompts, not proven
 root causes. No revenue, profit or recommended prices are calculated. No
 customer identities, free-text source notes, credentials or raw snapshots are
 included in the delivered JSON. Full source evidence remains local.
+
+The client message contains period results, comparisons and priority checks.
+It omits rolling-window totals, raw snapshot IDs and fixed statements listing
+metrics that are not calculated. These are evidence notes, not runtime errors.
+The structured `evidence` and `details_markdown` retain window provenance,
+snapshot identity and interpretation limits; `--save` stores the full detailed
+report locally. Bot delivery uses only compact `markdown`. Material stale data,
+missing coverage and unknown inventory stay visible in the client message.
 
 ## Generate locally
 

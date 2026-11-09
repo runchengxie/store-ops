@@ -44,7 +44,7 @@ def test_api_calendar_dates_produce_daily_counts_without_claiming_verified_insta
     assert r['date_basis'] == 'platform_calendar'
     assert 'eMAG 平台日期' in r['markdown']
     assert '订单状态' in r['markdown']
-    assert '时区尚未核实' in r['markdown']
+    assert '时区尚未核实' in r['details_markdown']
 
 
 def test_weekly_calendar_counts_and_status_codes_use_creation_period():
@@ -104,6 +104,48 @@ def test_malformed_status_text_is_not_copied_into_the_delivered_json():
     r = digest.build(s, 'daily', NOW)
     assert r['metrics']['orders']['current_statuses'] == {'unknown': 1}
     assert 'private-customer-text' not in json.dumps(r)
+
+
+@pytest.mark.parametrize('locale', ['en', 'zh-CN'])
+def test_client_message_keeps_period_results_while_local_details_retain_provenance(locale):
+    r = digest.build(calendar_snapshot(), 'weekly', NOW, locale=locale)
+    assert r['metrics']['orders']['current'] == 3
+    assert r['metrics']['orders']['window_count'] == 5
+    assert '2026-11-08' in r['markdown']
+    assert 'snap-1' not in r['markdown']
+    for text in ('完整采集窗口', '未计算销售额', '库存变化不等于销量',
+                 'Full captured window', 'Revenue, net profit', 'inventory changes are not sales'):
+        assert text not in r['markdown']
+    assert r['markdown'] in r['details_markdown']
+    assert 'snap-1' in r['details_markdown']
+    assert r['evidence']['window_counts'] == {'orders': 5, 'returns': 0}
+    assert r['evidence']['date_basis'] == 'platform_calendar'
+
+
+def test_missing_stock_and_stale_evidence_still_warn_in_the_client_message():
+    s = calendar_snapshot()
+    s['captured_at'] = '2026-11-01T00:00:00Z'
+    r = digest.build(s, 'weekly', NOW, locale='zh-CN')
+    assert '过期' in r['markdown']
+    assert '库存未知 1' in r['markdown']
+
+
+def test_saved_report_includes_details_while_delivery_markdown_stays_compact(monkeypatch, capsys):
+    from app import emag_digest_cli
+    from app.services import store_artifacts
+    saved = {}
+    source = snapshot()
+    source['captured_at'] = datetime.now(timezone.utc).isoformat()
+    monkeypatch.setattr(store_artifacts, 'read_snapshot', lambda *args: source)
+    def save(*args):
+        saved['markdown'] = args[3]
+        return {'report_id': 'report-1'}
+    monkeypatch.setattr(store_artifacts, 'save_report', save)
+    assert emag_digest_cli.main(['--store-id', 'test-ro', '--kind', 'daily', '--save']) == 0
+    output = json.loads(capsys.readouterr().out)
+    assert saved['markdown'] == output['details_markdown']
+    assert output['markdown'] in saved['markdown']
+    assert 'snap-1' not in output['markdown'] and 'snap-1' in saved['markdown']
 
 
 @pytest.mark.parametrize(('kind', 'now', 'start', 'end'), [

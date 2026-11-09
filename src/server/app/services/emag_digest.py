@@ -104,14 +104,20 @@ def build(snapshot, kind, now, timezone_name='Europe/Bucharest', locale='en', *,
     from app.services.store_artifacts import validate_id
     store_id = validate_id(snapshot['store_id'] if snapshot else store_id)
     p = period(kind, now, timezone_name)
+    display_end = (datetime.fromisoformat(p['end']).date() - timedelta(days=1)).isoformat()
+    display_dates = p['start'] if kind == 'daily' else p['start'] + ' 至 ' + display_end
+    if locale == 'en' and kind == 'weekly':
+        display_dates = p['start'] + ' to ' + display_end
     zh = locale == 'zh-CN'
     title = ('经营日报' if kind == 'daily' else '经营周报') if zh else ('Daily store report' if kind == 'daily' else 'Weekly store report')
     lines = [f'# {title} · {store_id}', '',
-             (f"统计区间：{p['start']} 至 {p['end']}（结束日不含，{timezone_name}）" if zh else
-              f"Period: {p['start']} to {p['end']} (end exclusive, {timezone_name})")]
+             (f"统计日期：{display_dates}（{timezone_name}）" if zh else
+              f"Dates: {display_dates} ({timezone_name})")]
+    detail_lines = []
     result = {'schema_version': 1, 'store_id': store_id, 'kind': kind, 'period': p,
               'timezone': timezone_name, 'locale': locale, 'generated_at': now.isoformat(),
-              'snapshot_id': None, 'captured_at': None, 'freshness': 'missing', 'date_basis': 'unavailable', 'metrics': {}}
+              'snapshot_id': None, 'captured_at': None, 'freshness': 'missing', 'date_basis': 'unavailable',
+              'metrics': {}, 'evidence': {}}
     if snapshot is None:
         lines += ['', '暂无已保存的数据，经营指标不可用。请检查采集服务。' if zh else
                   'Saved evidence unavailable. Check the collector; business figures are unknown.']
@@ -125,9 +131,9 @@ def build(snapshot, kind, now, timezone_name='Europe/Bucharest', locale='en', *,
         fresh = 'stale' if now - captured > timedelta(hours=24) else 'fresh'
         result.update(snapshot_id=snapshot['snapshot_id'], captured_at=captured.isoformat(), freshness=fresh)
         captured_display = captured.astimezone(ZoneInfo(timezone_name)).isoformat(timespec='seconds')
-        lines += ['', ('数据已过期，以下仅为历史观测。' if zh else 'STALE evidence: historical observations only.')
-                  if fresh == 'stale' else ('数据采集于最近 24 小时内。' if zh else 'Evidence captured within the last 24 hours.'),
-                  f"{'采集时间' if zh else 'Captured'}: {captured_display}"]
+        if fresh == 'stale':
+            lines += ['', '数据已过期，以下仅为历史观测。' if zh else 'STALE evidence: historical observations only.']
+        lines += ['', f"{'数据更新' if zh else 'Updated'}: {captured_display}"]
         data = snapshot['data']
         window = data.get('commercial_summary', {}).get('window', {})
         evidence = data.get('commercial_evidence', {})
@@ -138,8 +144,8 @@ def build(snapshot, kind, now, timezone_name='Europe/Bucharest', locale='en', *,
         bases = {counts['basis'] for counts in (orders, returns) if counts['basis'] != 'unavailable'}
         result['date_basis'] = next(iter(bases)) if len(bases) == 1 else 'mixed' if bases else 'unavailable'
         if 'platform_calendar' in bases:
-            lines[2] = (f"统计日期：{p['start']} 至 {p['end']}（结束日不含，eMAG 平台日期）" if zh else
-                        f"Dates: {p['start']} to {p['end']} (end exclusive, eMAG platform calendar dates)")
+            lines[2] = (f"统计日期：{display_dates}（eMAG 平台日期）" if zh else
+                        f"Dates: {display_dates} (eMAG platform calendar dates)")
         offers = data.get('offers')
         if not isinstance(offers, list) or any(not isinstance(r, dict) for r in offers):
             raise ValueError('Invalid offer observations')
@@ -166,11 +172,11 @@ def build(snapshot, kind, now, timezone_name='Europe/Bucharest', locale='en', *,
             unknown = sum(v for k, v in statuses.items() if k not in labels)
             if unknown:
                 parts.append(('状态未知 ' if zh else 'unknown ') + str(unknown))
-            lines += [('订单状态（采集时状态，按下单日期归组）：' if zh else 'Order statuses at capture (grouped by creation date): ') +
+            lines += [('本期订单状态：' if zh else 'Order statuses: ') +
                       ('；'.join(parts) if parts else '本期无订单。' if zh else 'No orders in this period.')]
         if 'platform_calendar' in bases:
-            lines += [('按 eMAG 返回的日期分组，时区尚未核实；未将其转换成精确的罗马尼亚时刻。' if zh else
-                       'Grouped by eMAG platform calendar date labels; timezone is unverified. These are not converted into verified Romania-time instants.')]
+            detail_lines += [('按 eMAG 返回的日期分组，时区尚未核实；未将其转换成精确的罗马尼亚时刻。' if zh else
+                              'Grouped by eMAG platform calendar date labels; timezone is unverified. These are not converted into verified Romania-time instants.')]
         if orders['current'] is None or returns['current'] is None:
             lines += [('部分指标不可用：来源日期、时区或采集覆盖不兼容，不能据此填零。' if zh else
                        'Some figures are unavailable because source dates, timezone or coverage are incompatible; unknown is not zero.')]
@@ -182,11 +188,15 @@ def build(snapshot, kind, now, timezone_name='Europe/Bucharest', locale='en', *,
                 window_labels.append(datetime.fromisoformat(value.replace('Z', '+00:00')).isoformat())
             except (ValueError, AttributeError, TypeError):
                 window_labels.append(unavailable)
-        lines += [(f"采集窗口：{window_labels[0]} 至 {window_labels[1]}。" if zh else
+        result['evidence'] = {'window_start': window_labels[0], 'window_end': window_labels[1],
+                              'window_counts': {'orders': orders['window_count'], 'returns': returns['window_count']},
+                              'date_basis': result['date_basis'], 'snapshot_id': snapshot['snapshot_id']}
+        detail_lines += [(f"采集窗口：{window_labels[0]} 至 {window_labels[1]}。" if zh else
                    f"Captured window: {window_labels[0]} to {window_labels[1]}."),
-                  (f"完整采集窗口共有订单 {figure(orders['window_count'])}、退货申请 {figure(returns['window_count'])}；本期数据已单独分组。订单记录含取消等状态，不代表已结算销量。" if zh else
-                   f"Full captured window: {figure(orders['window_count'])} orders, {figure(returns['window_count'])} return requests; period figures are grouped separately. Records include cancellations and are not settled sales."),
-                  '', '## 当前库存观测' if zh else '## Inventory at capture time',
+                  (f"完整采集窗口共有订单 {figure(orders['window_count'])}、退货申请 {figure(returns['window_count'])}。窗口总数与本期指标分开；订单记录含取消等状态，不代表已结算销量。" if zh else
+                   f"Full captured window: {figure(orders['window_count'])} orders, {figure(returns['window_count'])} return requests. Window totals are separate from period figures. Records include cancellations and are not settled sales."),
+                  '订单状态为采集时状态，按下单日期归组。' if zh else 'Order statuses are observed at capture and grouped by creation date.']
+        lines += ['', '## 当前库存观测' if zh else '## Inventory at capture time',
                   (f"- 商品 {len(offers)}；已知库存合计 {figure(metrics['stock_known_total'])}；库存未知 {metrics['stock_unknown_rows']} 个；零库存 {metrics['out_of_stock_rows']} 个。" if zh else
                    f"- Offers {len(offers)}; known stock {figure(metrics['stock_known_total'])}; unknown stock rows {metrics['stock_unknown_rows']}; zero-stock rows {metrics['out_of_stock_rows']}.")]
         priorities = []
@@ -200,8 +210,11 @@ def build(snapshot, kind, now, timezone_name='Europe/Bucharest', locale='en', *,
             priorities.append('核实平台时间口径与数据覆盖后，再比较按日／周业绩。' if zh else 'Verify source timezone and coverage before comparing day/week performance.')
         lines += ['', '## 优先检查' if zh else '## Priority checks']
         lines += ['- ' + text for text in priorities[:3]] or ['- ' + ('当前规则未发现上述待查项。' if zh else 'No checks triggered by these bounded rules.')]
-        lines += ['', '未计算销售额、净利润或建议售价；库存变化不等于销量。' if zh else
+        detail_lines += ['', '未计算销售额、净利润或建议售价；库存变化不等于销量。' if zh else
                   'Revenue, net profit and recommended prices are not calculated; inventory changes are not sales.',
                   f"{'证据快照' if zh else 'Source snapshot'}: {snapshot['snapshot_id']}"]
     result['markdown'] = '\n'.join(lines)
+    result['details_markdown'] = result['markdown']
+    if detail_lines:
+        result['details_markdown'] += '\n\n' + ('## 口径与证据' if zh else '## Basis and evidence') + '\n\n' + '\n'.join(detail_lines)
     return result

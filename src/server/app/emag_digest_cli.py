@@ -23,7 +23,7 @@ def main(argv=None):
                                    args.locale, store_id=args.store_id)
         if args.save and snapshot:
             report = store_artifacts.save_report(args.store_id, snapshot['snapshot_id'],
-                                                 'eMAG ' + args.kind + ' digest', result['markdown'])
+                                                 'eMAG ' + args.kind + ' digest', result['details_markdown'])
             result['report_id'] = report['report_id']
         output = json.dumps(result, ensure_ascii=False, allow_nan=False)
         if len(output.encode('utf-8')) > 32000:
