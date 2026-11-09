@@ -95,5 +95,56 @@ def test_legacy_source_never_uploads_incomplete_image(tmp_path, monkeypatch):
         d._deliver_image({"state_dir": str(tmp_path)}, NOW, {"delivery_id": "key", "status": "delivered"})[
             "image_status"
         ]
+        == "skipped_legacy"
+    )
+    with sqlite3.connect(tmp_path / "delivery.sqlite3") as db:
+        assert json.loads(db.execute("SELECT payload FROM deliveries").fetchone()[0]) == {
+            "report": {"snapshot_id": "s"}
+        }
+        assert db.execute("SELECT COUNT(*) FROM images").fetchone()[0] == 0
+
+
+@pytest.mark.parametrize(
+    "visual",
+    [
+        {"schema_version": 99, "snapshot_id": "s"},
+        {"schema_version": 1, "snapshot_id": "other"},
+        {"status": "omitted_size_limit"},
+    ],
+)
+def test_explicit_invalid_or_omitted_visual_stays_unavailable(tmp_path, monkeypatch, visual):
+    payload = json.dumps({"report": {"snapshot_id": "s", "visual": visual}})
+    with sqlite3.connect(tmp_path / "delivery.sqlite3") as db:
+        db.execute("CREATE TABLE deliveries (id TEXT,status TEXT,message_id TEXT,payload TEXT)")
+        db.execute("INSERT INTO deliveries VALUES (?,?,?,?)", ("key", "delivered", "om_text", payload))
+    monkeypatch.setattr(d, "_execute", lambda *args: pytest.fail("Invalid visual attempted upload"))
+    assert (
+        d._deliver_image({"state_dir": str(tmp_path)}, NOW, {"delivery_id": "key", "status": "delivered"})[
+            "image_status"
+        ]
         == "unavailable"
     )
+    with sqlite3.connect(tmp_path / "delivery.sqlite3") as db:
+        assert db.execute("SELECT payload FROM deliveries").fetchone()[0] == payload
+        assert db.execute("SELECT COUNT(*) FROM images").fetchone()[0] == 0
+
+
+@pytest.mark.parametrize(
+    ("status", "expected"),
+    [
+        ("skipped_legacy", 0),
+        ("delivered", 0),
+        ("unavailable", 1),
+        ("render_failed", 1),
+        ("unknown", 1),
+        ("rejected", 1),
+    ],
+)
+def test_delivery_cli_treats_only_legacy_skip_as_successful_migration(tmp_path, monkeypatch, capsys, status, expected):
+    from app import emag_digest_delivery as cli
+
+    config = tmp_path / "config.json"
+    config.write_text("{}")
+    monkeypatch.setattr(d, "run", lambda *a, **kw: [{"status": "delivered", "image_status": status}])
+    assert cli.main(["--config", str(config)]) == expected
+    assert json.loads(capsys.readouterr().out)[0]["image_status"] == status

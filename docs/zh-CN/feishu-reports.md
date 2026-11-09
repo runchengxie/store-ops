@@ -153,7 +153,7 @@ python -m app.emag_digest_delivery --config /private/config/digest.json --kind d
 
 在现有私有发送配置中设置 `"image_enabled": true`，每次文字报告成功发送后再发一张 PNG
 长图；默认关闭。更新来源端和发送端后，继续使用现有机器人、收件人和来源命令。
-新来源报告携带从同一快照派生的 `visual` 数据；旧存档来源缺少匹配版本的 visual 数据时返回 `image_status: unavailable`，不会上传；更新来源后需有意发送新的更正版。
+新来源报告携带从同一快照派生的 `visual` 数据；已发送的旧版文字存档若没有 `visual` 字段，返回 `image_status: skipped_legacy`，不渲染、不上传、不发送，CLI 正常退出。旧文字记录保持不变，不自动补发历史图片；更新来源后需有意发送新的更正版来获得新的一对文字/图片。显式无效或因大小被省略的 visual 数据仍返回 `unavailable`，仍属于发送失败。
 
 图片包括统计期核心数字与上期对比、近七日订单创建日期趋势、并列商品排行、采集时订单状态、
 当前库存风险、可选费用结算信息及优先事项。库存不等于期间销量，预计或已处理结算不等于银行到账。

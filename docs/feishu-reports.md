@@ -202,9 +202,12 @@ Set `"image_enabled": true` in the existing private delivery configuration to se
 one PNG long image after each successful text digest. The default is false. No
 change to the bot application, recipient or source commands is needed after both
 source and delivery installations have been updated. New source digests include a
-bounded `visual` payload derived from the same saved snapshot. Old stored source reports without a matching versioned visual payload return
-`image_status: unavailable` without uploading; use a new deliberate correction
-after updating the source to send an image.
+bounded `visual` payload derived from the same saved snapshot. Already delivered legacy text reports with no `visual` field return
+`image_status: skipped_legacy` without rendering, uploading or sending, and the
+CLI exits successfully. Existing text receipts are preserved; old periods are
+not backfilled automatically. Use a new deliberate correction after updating
+the source to send a fresh text/image pair. An explicit invalid or omitted
+visual payload remains `unavailable` and is still a delivery failure.
 
 The image contains period KPIs, previous comparisons, a seven-day order-creation
 trend, tied top-product ranking, observed order states, current inventory risks,

@@ -205,6 +205,8 @@ def _deliver_image(config, now, receipt):
         if not stored:
             raise ValueError('Image requires confirmed text and retained source payload')
         report = json.loads(stored[0])['report']
+        if 'visual' not in report:
+            return {**receipt,'image_status':'skipped_legacy','image_message_id':None}
         visual = report.get('visual')
         if (not isinstance(visual, dict) or visual.get('schema_version') != 1
                 or visual.get('snapshot_id') != report.get('snapshot_id')):
