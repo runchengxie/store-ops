@@ -193,3 +193,58 @@ scheduled mode cannot enable corrections. Preview remains read-only with
 respect to the delivery ledger, and does not establish that an original exists.
 Disable only the reporting timer or set `enabled: false` to stop
 new reports; preserve ledger history and existing collection tasks.
+
+## Optional PNG report images
+
+[简体中文](zh-CN/feishu-reports.md#png-图片报告)
+
+Set `"image_enabled": true` in the existing private delivery configuration to send
+one PNG long image after each successful text digest. The default is false. No
+change to the bot application, recipient or source commands is needed after both
+source and delivery installations have been updated. New source digests include a
+bounded `visual` payload derived from the same saved snapshot. Old stored source reports without a matching versioned visual payload return
+`image_status: unavailable` without uploading; use a new deliberate correction
+after updating the source to send an image.
+
+The image contains period KPIs, previous comparisons, a seven-day order-creation
+trend, tied top-product ranking, observed order states, current inventory risks,
+optional fee/payout observations and priorities. Snapshot stock is not period
+sales; estimated or processed payout is not bank receipt. Missing or incomplete
+series never become zero bars. Aged stock is labeled as the reconciled portion.
+Source dates and current observation times remain distinct.
+
+Pillow is already a runtime dependency. Chinese rendering requires a local CJK
+font. The renderer checks the configured `font_path` (absolute path), then the
+`IVYEA_OPS_REPORT_FONT` environment variable and supported installed Noto/Windows
+font locations. An explicit invalid font does not silently fall back. Chinese
+reports reject a missing-glyph font. Rendering failure leaves text delivery intact
+and returns `image_status: render_failed`; a later run may retry rendering.
+
+Text and images use independent persisted delivery claims. Images are rendered
+from the confirmed text's retained payload, rather than a newly generated report.
+The image is uploaded as binary stdin to the configured bot CLI; no arbitrary
+source-supplied local path or URL is uploaded. Success requires the bot identity,
+an uploaded image key and the separate sent image's `message_id`. Upload success
+alone is not delivery. Interrupted/uncertain image submission is terminal
+`unknown`, and explicit rejection is retained without automatic replay. Existing
+text is never resent just to retry an image. Use a new reviewed correction ID for
+an intentionally new text/image pair. A disabled image mode preserves the old
+receipt shape and behavior. Preview does not render, upload, send or claim.
+
+Images live under the configured private delivery `state_dir/images`, named by
+the delivery key. Use a stable private state path, never a temporary worktree.
+`font_path` is machine-local configuration and must not be committed.
+
+To render a saved source digest without sending:
+
+```bash
+python -m app.emag_digest_cli --store-id example-ro --kind weekly --locale zh-CN > /private/data/report.json
+python -m app.emag_digest_visual_cli --report /private/data/report.json --output-id weekly-preview
+```
+
+The output is created under `IVYEA_OPS_DATA_DIR/digest-images/<store>/`; existing
+output IDs are not overwritten. The renderer returns the path and snapshot ID.
+The width is 1120 pixels; height and file size are bounded. Inspect real daily and
+weekly images for missing glyphs, wrapped labels and complete source notes before
+enabling scheduled image delivery. Financial coverage in the image is only as
+good as the explicitly imported reconciliation evidence.

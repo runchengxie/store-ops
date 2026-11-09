@@ -146,3 +146,40 @@ python -m app.emag_digest_delivery --config /private/config/digest.json --kind d
 重复运行不会重发。原结果为 unknown 或 rejected 时拒绝更正发送；定时模式不能
 启用更正。预览不写发送账本，也不证明原记录存在。停止新报告时只停报告 timer 或
 设 `enabled: false`，保留账本及原采集任务。
+
+## PNG 图片报告
+
+[English](../feishu-reports.md#optional-png-report-images)
+
+在现有私有发送配置中设置 `"image_enabled": true`，每次文字报告成功发送后再发一张 PNG
+长图；默认关闭。更新来源端和发送端后，继续使用现有机器人、收件人和来源命令。
+新来源报告携带从同一快照派生的 `visual` 数据；旧存档来源缺少匹配版本的 visual 数据时返回 `image_status: unavailable`，不会上传；更新来源后需有意发送新的更正版。
+
+图片包括统计期核心数字与上期对比、近七日订单创建日期趋势、并列商品排行、采集时订单状态、
+当前库存风险、可选费用结算信息及优先事项。库存不等于期间销量，预计或已处理结算不等于银行到账。
+缺失/覆盖不足不画成零；库龄只展示已核对部分，并区分订单日期和当前观测时间。
+
+Pillow 已是运行依赖。中文需安装 CJK 字体；可配置绝对路径 `font_path`，否则查找
+`IVYEA_OPS_REPORT_FONT` 及支持的 Noto/Windows 已安装字体位置。显式无效字体不会静默回退，
+缺失中文字形也会拒绝。渲染失败保留已发送文字，返回 `image_status: render_failed`，下次可重试渲染。
+
+文字、图片分别保存幂等记录。图片读取已发送文字留存的数据，不重新获取一份可能不同的报告。
+上传通过机器人 CLI 的二进制标准输入完成，不上传来源指定的任意文件路径/URL。
+成功必须同时有机器人身份、上传图片标识和单独图片消息的 `message_id`；上传成功不等于送达。
+结果不确定标为终态 `unknown`，明确拒绝也不自动重发；重试图片不会重发文字。
+需要有意重新发送一对文字/图片时，使用新的经确认的 correction ID。未启用图片时保持旧行为；
+预览不渲染、不发送、不写发送记录。
+
+图片保存在私有 `state_dir/images` 下，以发送键命名；使用稳定路径，不依赖临时 worktree。
+字体路径是机器本地配置，不提交仓库。
+
+只生成图片、不发送：
+
+```bash
+python -m app.emag_digest_cli --store-id example-ro --kind weekly --locale zh-CN > /private/data/report.json
+python -m app.emag_digest_visual_cli --report /private/data/report.json --output-id weekly-preview
+```
+
+图片写入 `IVYEA_OPS_DATA_DIR/digest-images/<store>/`，不覆盖已有 output ID；返回路径和快照标识。
+宽1120像素，高度与文件大小有上限。正式启用前目视检查真实日报、周报的字体、换行和来源说明。
+图片里的财务信息仅以已明确导入的对账证据为依据。

@@ -1,5 +1,7 @@
 # 更新日志
 
+- Add optional source-backed PNG daily/weekly digests alongside Feishu text, with explicit unknowns, CJK font checks and independent image delivery claims.
+
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循语义化版本。
 
 只记**对使用者有影响**的改动。纯重构、内部整理不列 —— 那些看 git log。

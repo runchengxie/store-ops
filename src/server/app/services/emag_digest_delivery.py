@@ -31,6 +31,10 @@ def validate_config(config):
     ZoneInfo(config['timezone'])
     if config.get('locale') not in ('en', 'zh-CN') or not Path(config['state_dir']).is_absolute():
         raise ValueError('An absolute private state path and supported locale are required')
+    if type(config.get('image_enabled', False)) is not bool:
+        raise ValueError('image_enabled must be boolean')
+    if config.get('font_path') is not None and (not isinstance(config['font_path'], str) or not Path(config['font_path']).is_absolute()):
+        raise ValueError('font_path requires an absolute local path')
     _command(config['cli_command'])
     for kind in ('daily', 'weekly'):
         _command(config['source_commands'][kind])
@@ -43,7 +47,7 @@ def validate_config(config):
 def _execute(argv, timeout, text=None):
     # Keep diagnostic output private and memory bounded, including malformed CLI output.
     with tempfile.TemporaryFile() as output, tempfile.TemporaryFile() as errors:
-        result = subprocess.run(argv, input=None if text is None else text.encode('utf-8'),
+        result = subprocess.run(argv, input=text if isinstance(text, bytes) else None if text is None else text.encode('utf-8'),
                                 stdout=output, stderr=errors, timeout=timeout, check=False)
         output.seek(0)
         raw = output.read(65537)
@@ -101,7 +105,7 @@ def _receipt(row):
             'message_id': row[2]}
 
 
-def run(config, now, kind=None, preview=False, *, correction_id=None):
+def _run_text(config, now, kind=None, preview=False, *, correction_id=None):
     validate_config(config)
     if kind not in (None, 'daily', 'weekly'):
         raise ValueError('Unsupported report kind')
@@ -181,3 +185,74 @@ def run(config, now, kind=None, preview=False, *, correction_id=None):
             conn.commit()
             results.append({'delivery_id': key, 'status': status, 'message_id': message_id})
     return results
+
+
+def _deliver_image(config, now, receipt):
+    """Claim an independent image once, using the already delivered text's payload."""
+    if receipt['status'] != 'delivered':
+        return receipt
+    root = Path(config['state_dir'])
+    key = receipt['delivery_id']
+    with sqlite3.connect(root / 'delivery.sqlite3', timeout=30) as conn:
+        conn.execute('CREATE TABLE IF NOT EXISTS images (id TEXT PRIMARY KEY,status TEXT NOT NULL, '
+                     'image_key TEXT,message_id TEXT,finished_at TEXT)')
+        conn.execute('BEGIN IMMEDIATE')
+        existing = conn.execute('SELECT status,message_id FROM images WHERE id=?',(key,)).fetchone()
+        if existing:
+            return {**receipt,'image_status':'unknown' if existing[0]=='sending' else existing[0],
+                    'image_message_id':existing[1]}
+        stored = conn.execute('SELECT payload FROM deliveries WHERE id=? AND status=?',(key,'delivered')).fetchone()
+        if not stored:
+            raise ValueError('Image requires confirmed text and retained source payload')
+        report = json.loads(stored[0])['report']
+        visual = report.get('visual')
+        if (not isinstance(visual, dict) or visual.get('schema_version') != 1
+                or visual.get('snapshot_id') != report.get('snapshot_id')):
+            return {**receipt,'image_status':'unavailable','image_message_id':None}
+        # Rendering is local and retryable. No upload/send intent exists on render failure.
+        from app.services.emag_digest_visual import render
+        destination = root / 'images' / (key + '.png')
+        try:
+            destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            if destination.parent.is_symlink() or destination.is_symlink():
+                raise ValueError('Image artifact symlinks are forbidden')
+            render(report, destination, font_path=config.get('font_path'))
+        except (ValueError, OSError, KeyError, TypeError, ImportError):
+            return {**receipt,'image_status':'render_failed','image_message_id':None}
+        _verify_bot(config)
+        conn.execute('INSERT INTO images VALUES (?,?,NULL,NULL,NULL)',(key,'sending'))
+        conn.commit()
+        status, image_key, message_id = 'unknown', None, None
+        try:
+            code, response = _execute(_command(config['cli_command']) + [
+                'im','images','create','--as','bot','--data','{"image_type":"message"}','--file','-'],
+                config.get('timeout_seconds',90), destination.read_bytes())
+            if code == 0 and response.get('ok') is True and response.get('identity') == 'bot':
+                candidate = response.get('data',{}).get('image_key')
+                if isinstance(candidate,str) and re.fullmatch(r'img_[A-Za-z0-9_-]+',candidate):
+                    image_key = candidate
+                    # Persist uploaded identity before attempting exactly one message.
+                    conn.execute('UPDATE images SET image_key=? WHERE id=?',(image_key,key));conn.commit()
+                    code,response = _execute(_command(config['cli_command']) + [
+                        'im','+messages-send','--as','bot','--user-id',config['recipient_open_id'],
+                        '--image',image_key,'--idempotency-key',key+'i'],config.get('timeout_seconds',90))
+                    candidate=response.get('data',{}).get('message_id')
+                    if (code == 0 and response.get('ok') is True and response.get('identity')=='bot'
+                            and isinstance(candidate,str) and re.fullmatch(r'om_[A-Za-z0-9_-]+',candidate)):
+                        status,message_id='delivered',candidate
+                    elif response.get('ok') is False:
+                        status='rejected'
+            elif response.get('ok') is False:
+                status='rejected'
+        except (OSError,ValueError,AttributeError,TypeError,subprocess.TimeoutExpired):
+            status='unknown'
+        conn.execute('UPDATE images SET status=?,image_key=?,message_id=?,finished_at=? WHERE id=?',
+                     (status,image_key,message_id,datetime.now(now.tzinfo).isoformat(),key));conn.commit()
+        return {**receipt,'image_status':status,'image_message_id':message_id}
+
+
+def run(config, now, kind=None, preview=False, *, correction_id=None):
+    results = _run_text(config, now, kind, preview, correction_id=correction_id)
+    if preview or not config.get('image_enabled',False):
+        return results
+    return [_deliver_image(config,now,result) for result in results]

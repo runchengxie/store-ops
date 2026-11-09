@@ -21,6 +21,8 @@ def main(argv=None):
             snapshot = None
         result = emag_digest.build(snapshot, args.kind, datetime.now(timezone.utc), args.timezone,
                                    args.locale, store_id=args.store_id)
+        from app.services.emag_digest_visual import build_visual
+        result['visual'] = build_visual(snapshot, result)
         if args.save and snapshot:
             report = store_artifacts.save_report(args.store_id, snapshot['snapshot_id'],
                                                  'eMAG ' + args.kind + ' digest', result['details_markdown'])

@@ -23,7 +23,7 @@ def main(argv=None):
         sys.stdout.write('{"error":"digest_delivery_unavailable"}\n')
         return 2
     sys.stdout.write(json.dumps(result, ensure_ascii=False, allow_nan=False) + '\n')
-    return 0 if all(r['status'] in ('delivered', 'preview') for r in result) else 1
+    return 0 if all(r['status'] in ('delivered', 'preview') and r.get('image_status', 'delivered') == 'delivered' for r in result) else 1
 
 
 if __name__ == '__main__':
