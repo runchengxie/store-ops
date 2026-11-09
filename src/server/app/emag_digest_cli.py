@@ -5,6 +5,32 @@ import json
 import sys
 
 
+def _fit_optional(original, enriched, visual, saving):
+    """Budget the actual CLI encoding, reserving the persisted report identifier."""
+    def fits(candidate):
+        serialized = {**candidate, 'report_id': '0' * 32} if saving else candidate
+        return (len(json.dumps(serialized, ensure_ascii=False, allow_nan=False).encode('utf-8')) <= 32000
+                and len(candidate['markdown'].encode('utf-8')) <= 16000)
+
+    candidate = {**enriched, 'visual': visual}
+    if fits(candidate):
+        return candidate
+    # Optional finance metadata and its appended prose are removed together. Keep
+    # the entire original operational report rather than trimming its metrics.
+    finance_marker = {'schema_version': 1, 'store_id': original['store_id'],
+                      'status': 'omitted_size_limit', 'scopes': []}
+    candidate = {**original, 'reconciliation': finance_marker, 'visual': visual}
+    if fits(candidate):
+        return candidate
+    candidate = {**original, 'reconciliation': finance_marker,
+                 'visual': {'status': 'omitted_size_limit'}}
+    if fits(candidate):
+        return candidate
+    if fits(original):
+        return dict(original)
+    raise ValueError('Operational report exceeds serialization bound')
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
     parser.add_argument('--store-id', required=True)
@@ -21,10 +47,12 @@ def main(argv=None):
             snapshot = None
         result = emag_digest.build(snapshot, args.kind, datetime.now(timezone.utc), args.timezone,
                                    args.locale, store_id=args.store_id)
+        original = result
         from app.services import emag_reconciliation
-        result = emag_reconciliation.attach_digest(result, args.store_id, args.locale)
+        result = emag_reconciliation.attach_digest(original, args.store_id, args.locale)
         from app.services.emag_digest_visual import build_visual
-        result['visual'] = build_visual(snapshot, result)
+        visual = build_visual(snapshot, result)
+        result = _fit_optional(original, result, visual, bool(args.save and snapshot))
         if args.save and snapshot:
             report = store_artifacts.save_report(args.store_id, snapshot['snapshot_id'],
                                                  'eMAG ' + args.kind + ' digest', result['details_markdown'])
