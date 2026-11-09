@@ -21,6 +21,8 @@ def main(argv=None):
             snapshot = None
         result = emag_digest.build(snapshot, args.kind, datetime.now(timezone.utc), args.timezone,
                                    args.locale, store_id=args.store_id)
+        from app.services import emag_reconciliation
+        result = emag_reconciliation.attach_digest(result, args.store_id, args.locale)
         if args.save and snapshot:
             report = store_artifacts.save_report(args.store_id, snapshot['snapshot_id'],
                                                  'eMAG ' + args.kind + ' digest', result['details_markdown'])
