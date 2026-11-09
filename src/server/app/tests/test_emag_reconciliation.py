@@ -184,3 +184,46 @@ def test_sign_changing_revision_stales_links_instead_of_applying_old_sign():
     r=service.reconcile('shop')['scopes'][0]
     assert r['documents'][0]['unallocated_amount']=='-100.00'
     assert any(i['code']=='stale_allocation' for i in r['issues'])
+
+def test_confirmed_allocation_requires_reviewed_endpoints():
+    b=batch();b['review_status']='unreviewed';service.import_batch('shop',b)
+    c=batch();c['records']=[alloc()]
+    with pytest.raises(ValueError):service.import_batch('shop',c)
+    assert len(service.history('shop'))==2
+
+
+def test_processed_observation_cannot_reclassify_estimate_under_same_id():
+    b=batch();service.import_batch('shop',b)
+    c=batch();c['records']=[{**b['records'][1],'revision':'v2','supersedes':'v1','status':'processed'}]
+    with pytest.raises(ValueError):service.import_batch('shop',c)
+    assert service.reconcile('shop')['scopes'][0]['payouts'][0]['status']=='estimated'
+
+
+@pytest.mark.parametrize('field',['document_revision','payout_revision'])
+def test_fabricated_allocation_revision_is_not_a_stale_observation(field):
+    b=batch();b['records'].append({**alloc(),field:'never-imported'})
+    with pytest.raises(ValueError):service.import_batch('shop',b)
+    assert service.history('shop')==[]
+
+
+def test_fabricated_reversal_revision_is_rejected_but_real_history_can_be_stale():
+    b=batch();service.import_batch('shop',b)
+    credit={'kind':'document','id':'credit','revision':'v1','document_type':'credit','amount':'-100.00',
+            'vat_basis':'inclusive','reverses_id':'fee-1','reverses_type':'fee','reverses_revision':'never-imported'}
+    c=batch();c['records']=[credit]
+    with pytest.raises(ValueError):service.import_batch('shop',c)
+    c['records']=[{**b['records'][0],'revision':'v2','supersedes':'v1','amount':'120.00'}]
+    service.import_batch('shop',c)
+    c['records']=[{**credit,'reverses_revision':'v1'}];service.import_batch('shop',c)
+    assert any(i['code']=='stale_reversal' for i in service.reconcile('shop')['scopes'][0]['issues'])
+
+
+def test_new_reviewed_revision_is_required_for_provenance_promotion():
+    b=batch();b['review_status']='unreviewed';service.import_batch('shop',b)
+    c=batch();service.import_batch('shop',c)
+    assert all(v['record']['review_status']=='unreviewed' for v in service.history('shop'))
+    c['records']=[{**r,'revision':'v2','supersedes':'v1'} for r in c['records']]
+    service.import_batch('shop',c)
+    c['records']=[{**alloc(),'document_revision':'v2','payout_revision':'v2'}]
+    service.import_batch('shop',c)
+    assert service.reconcile('shop')['scopes'][0]['confirmed_allocations']==1

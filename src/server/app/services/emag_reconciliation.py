@@ -183,7 +183,8 @@ def _evaluate(current):
         if not a['confirmed']:
             suggested+=1;continue
         if d['vat_basis']!='inclusive':raise ValueError('Confirmed allocations require comparable VAT-inclusive document amounts')
-        if a.get('review_status')!='reviewed':raise ValueError('Confirmed allocations require reviewed evidence')
+        if any(v.get('review_status')!='reviewed' for v in (a,d,p)):
+            raise ValueError('Confirmed allocations require reviewed endpoint and link evidence')
         if line is not None:
             lk=(a['document_type'],a['document_id'],a['document_line_id'])
             line_used[lk]=line_used.get(lk,Decimal(0))+value
@@ -227,6 +228,25 @@ def _evaluate(current):
             'outstanding_to_pay':None,'issues':issues}
 
 
+def _validate_history(current,versions):
+    """Unknown references differ from known historical observations that became stale."""
+    def lookup(kind,identity,revision,document_type=None):
+        key=_key({'kind':kind,'id':identity,'document_type':document_type})
+        record=versions.get((key,revision))
+        if record is None:raise ValueError('Referenced revision was never imported in this scope')
+        return record
+    for r in current.values():
+        if r['kind']=='allocation':
+            d=lookup('document',r['document_id'],r['document_revision'],r['document_type'])
+            p=lookup('payout',r['payout_id'],r['payout_revision'])
+            if r['confirmed'] and any(v.get('review_status')!='reviewed' for v in (r,d,p)):
+                raise ValueError('Confirmed links require reviewed source revisions')
+        elif r['kind']=='document' and r.get('reverses_id'):
+            original=lookup('document',r['reverses_id'],r['reverses_revision'],r['reverses_type'])
+            if _money(original['amount'])*_money(r['amount'])>=0:
+                raise ValueError('Reversal must have opposite sign to its referenced revision')
+
+
 def import_batch(store_id,payload):
     """Append validated manual observations atomically. Identical reimports are no-ops."""
     artifacts.validate_id(store_id)
@@ -249,10 +269,13 @@ def import_batch(store_id,payload):
                 if compare!=original:raise ValueError('Existing source revision changed')
                 continue
             if prior:
+                if r['kind']=='payout' and r['status']!=prior['status']:
+                    raise ValueError('Processed payout must use a separate identity and explicit estimate link')
                 if r.get('supersedes')!=prior['revision']:raise ValueError('Changed evidence requires current supersedes revision')
             elif 'supersedes' in r:raise ValueError('First revision cannot supersede missing evidence')
             current[key]=r;added.append(r)
         if len(current)>MAX_RECORDS:raise ValueError('Scope exceeds record bound')
+        _validate_history(current, {**old, **{(_key(r),r['revision']):r for r in added}})
         _evaluate(current)
         conn.execute('INSERT INTO batches VALUES (?,?,?,?)',(store_id,scope,digest,_json(b)))
         for r in added:
