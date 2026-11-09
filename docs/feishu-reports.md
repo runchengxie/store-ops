@@ -42,8 +42,9 @@ See the official [eMAG API contracts](https://marketplace-api.emag.ro/api-doc)
 for `OrderSave.date`, order date filters, RMA filters and the separate status codes.
 
 Missing inventory is unknown, never zero. Data older than 24 hours is marked
-stale. Reports include up to three deterministic checks for freshness, zero or
-unknown stock, and missing date evidence. These are review prompts, not proven
+stale. Reports include up to three deterministic checks, prioritizing stocked
+offers with validation issues and reconciled older stock, alongside material
+missing data. These are review prompts, not proven
 root causes. No revenue, profit or recommended prices are calculated. No
 customer identities, free-text source notes, credentials or raw snapshots are
 included in the delivered JSON. Full source evidence remains local.
@@ -55,6 +56,31 @@ The structured `evidence` and `details_markdown` retain window provenance,
 snapshot identity and interpretation limits; `--save` stores the full detailed
 report locally. Bot delivery uses only compact `markdown`. Material stale data,
 missing coverage and unknown inventory stay visible in the client message.
+
+## Product units and inventory risks
+
+Finalized-order product units sum current nonnegative integer quantities on
+active lines (`status: 1`) of finalized orders (`status: 4`), grouped by the
+same source-date period as order counts. Canceled/returned/pending orders and
+canceled lines do not contribute. Missing statuses, quantities or finalized
+product arrays prevent a complete total; known subtotals remain in local
+evidence. Zero requires complete period evidence. Current/prior comparisons
+use the same rule. These are capture-time quantities, not units fulfilled or
+settled during the period.
+
+Show up to three products by units with stable product-identity tie ordering,
+and explicitly indicate ties that extend beyond the displayed products.
+Missing product identity prevents a complete ranking even when unit quantities
+are known. Display bounded sanitized own-catalog SKUs or validated product IDs;
+never use customer/order notes or render source links/mentions.
+
+Inventory risk metrics reuse the existing clearance checks: positive-stock
+products with observed validation issues, involved units and up to three SKU
+priorities. 181+ day units include only complete age bands reconciled to
+captured stock. Unreconciled/missing products remain a visible verification
+count and the known aging subtotal is labelled partial. A zero-stock listing
+does not automatically imply a purchase requirement. These checks do not set
+prices, execute repairs, forecast inventory coverage days or place orders.
 
 ## Generate locally
 

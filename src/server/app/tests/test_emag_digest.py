@@ -130,6 +130,15 @@ def test_missing_stock_and_stale_evidence_still_warn_in_the_client_message():
     assert '库存未知 1' in r['markdown']
 
 
+def test_invalid_window_evidence_remains_language_neutral():
+    s = calendar_snapshot()
+    s['data']['commercial_summary']['window']['start'] = 'not-a-date'
+    s['data']['commercial_summary']['window']['end'] = None
+    evidence = [digest.build(s, 'weekly', NOW, locale=locale)['evidence'] for locale in ('en', 'zh-CN')]
+    assert evidence[0] == evidence[1]
+    assert evidence[0]['window_start'] is None and evidence[0]['window_end'] is None
+
+
 def test_saved_report_includes_details_while_delivery_markdown_stays_compact(monkeypatch, capsys):
     from app import emag_digest_cli
     from app.services import store_artifacts
@@ -146,6 +155,28 @@ def test_saved_report_includes_details_while_delivery_markdown_stays_compact(mon
     assert saved['markdown'] == output['details_markdown']
     assert output['markdown'] in saved['markdown']
     assert 'snap-1' not in output['markdown'] and 'snap-1' in saved['markdown']
+
+
+def test_report_integrates_period_units_without_changing_order_record_counts():
+    s = calendar_snapshot()
+    rows = s['data']['commercial_evidence']['orders_fbe']
+    rows[0]['products'] = [{'product_id': 1, 'status': 1, 'quantity': 2}]
+    rows[3].update(status=4, products=[{'product_id': 1, 'status': 1, 'quantity': 1}])
+    r = digest.build(s, 'weekly', NOW, locale='zh-CN')
+    assert r['metrics']['orders']['current'] == 3
+    assert r['metrics']['products']['current']['units'] == 2
+    assert r['metrics']['products']['previous']['units'] == 1
+    assert '已完成订单商品' in r['markdown'] and '2 件' in r['markdown']
+    assert '库存关注' in r['markdown']
+
+
+def test_period_source_failure_does_not_expose_unguarded_product_totals():
+    s = calendar_snapshot()
+    s['source'] = 'unsupported-import'
+    s['data']['commercial_evidence']['orders_fbe'][0]['products'] = [{'product_id': 1, 'status': 1, 'quantity': 999}]
+    r = digest.build(s, 'weekly', NOW)
+    assert r['metrics']['products']['current']['units'] is None
+    assert '999' not in r['markdown']
 
 
 @pytest.mark.parametrize(('kind', 'now', 'start', 'end'), [

@@ -67,5 +67,4 @@ to the same authorized owner conversation using the existing correction gate;
 keep original messages, receipts and schedule. Clean only this task's branch
 and worktree after successful merge/deployment.
 
-Status: client-copy cleanup authorized by the request; added metric design
-awaits confirmation of this short specification.
+Status: owner approved this short specification on 2026-11-09.

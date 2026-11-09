@@ -98,6 +98,24 @@ def _counts(evidence, prefix, window, start, end, calendar_allowed=False):
     return result
 
 
+def _order_period_rows(evidence, counts, start, end):
+    rows = _records(evidence, 'orders')
+    if rows is None or counts['basis'] == 'unavailable':
+        return None, None
+    parser = _aware
+    if counts['basis'] == 'platform_calendar':
+        parser = _calendar_time
+        start, end = start.replace(tzinfo=None), end.replace(tzinfo=None)
+    dated = [(row, parser(row.get('date'))) for row in rows]
+    if any(date is None for _, date in dated):
+        return None, None
+    selected = []
+    for key, lower, upper in (('current', start, end), ('previous', start - (end - start), start)):
+        group = [row for row, date in dated if lower <= date < upper] if counts[key] is not None else None
+        selected.append(group if group is not None and len(group) == counts[key] else None)
+    return tuple(selected)
+
+
 def build(snapshot, kind, now, timezone_name='Europe/Bucharest', locale='en', *, store_id=None):
     if locale not in ('en', 'zh-CN'):
         raise ValueError('Unsupported report locale')
@@ -154,6 +172,11 @@ def build(snapshot, kind, now, timezone_name='Europe/Bucharest', locale='en', *,
                    'stock_known_total': sum(known) if known else None,
                    'stock_unknown_rows': len(offers) - len(known), 'out_of_stock_rows': known.count(0)}
         result['metrics'] = metrics
+        from app.services import emag_digest_metrics
+        current_orders, previous_orders = _order_period_rows(evidence, orders, start, end)
+        product_metrics = emag_digest_metrics.products(current_orders, previous_orders, offers)
+        inventory_risks = emag_digest_metrics.inventory(snapshot)
+        metrics.update(products=product_metrics, inventory_risks=inventory_risks)
         unavailable = '不可用' if zh else 'unavailable'
         def figure(value):
             return unavailable if value is None else str(value)
@@ -174,6 +197,7 @@ def build(snapshot, kind, now, timezone_name='Europe/Bucharest', locale='en', *,
                 parts.append(('状态未知 ' if zh else 'unknown ') + str(unknown))
             lines += [('本期订单状态：' if zh else 'Order statuses: ') +
                       ('；'.join(parts) if parts else '本期无订单。' if zh else 'No orders in this period.')]
+        lines += emag_digest_metrics.render_products(product_metrics, locale)
         if 'platform_calendar' in bases:
             detail_lines += [('按 eMAG 返回的日期分组，时区尚未核实；未将其转换成精确的罗马尼亚时刻。' if zh else
                               'Grouped by eMAG platform calendar date labels; timezone is unverified. These are not converted into verified Romania-time instants.')]
@@ -182,15 +206,20 @@ def build(snapshot, kind, now, timezone_name='Europe/Bucharest', locale='en', *,
                        'Some figures are unavailable because source dates, timezone or coverage are incompatible; unknown is not zero.')]
         # Render only parseable window values, never arbitrary source annotations.
         window_labels = []
+        window_values = []
         for key in ('start', 'end'):
             value = window.get(key)
             try:
-                window_labels.append(datetime.fromisoformat(value.replace('Z', '+00:00')).isoformat())
+                parsed = datetime.fromisoformat(value.replace('Z', '+00:00')).isoformat()
             except (ValueError, AttributeError, TypeError):
-                window_labels.append(unavailable)
-        result['evidence'] = {'window_start': window_labels[0], 'window_end': window_labels[1],
+                parsed = None
+            window_values.append(parsed)
+            window_labels.append(parsed if parsed is not None else unavailable)
+        result['evidence'] = {'window_start': window_values[0], 'window_end': window_values[1],
                               'window_counts': {'orders': orders['window_count'], 'returns': returns['window_count']},
-                              'date_basis': result['date_basis'], 'snapshot_id': snapshot['snapshot_id']}
+                              'date_basis': result['date_basis'], 'snapshot_id': snapshot['snapshot_id'],
+                              'product_known_units': {key: product_metrics[key]['known_units'] for key in ('current', 'previous')},
+                              'product_invalid_records': {key: product_metrics[key]['invalid_records'] for key in ('current', 'previous')}}
         detail_lines += [(f"采集窗口：{window_labels[0]} 至 {window_labels[1]}。" if zh else
                    f"Captured window: {window_labels[0]} to {window_labels[1]}."),
                   (f"完整采集窗口共有订单 {figure(orders['window_count'])}、退货申请 {figure(returns['window_count'])}。窗口总数与本期指标分开；订单记录含取消等状态，不代表已结算销量。" if zh else
@@ -199,10 +228,17 @@ def build(snapshot, kind, now, timezone_name='Europe/Bucharest', locale='en', *,
         lines += ['', '## 当前库存观测' if zh else '## Inventory at capture time',
                   (f"- 商品 {len(offers)}；已知库存合计 {figure(metrics['stock_known_total'])}；库存未知 {metrics['stock_unknown_rows']} 个；零库存 {metrics['out_of_stock_rows']} 个。" if zh else
                    f"- Offers {len(offers)}; known stock {figure(metrics['stock_known_total'])}; unknown stock rows {metrics['stock_unknown_rows']}; zero-stock rows {metrics['out_of_stock_rows']}.")]
+        lines += emag_digest_metrics.render_inventory(inventory_risks, locale)
         priorities = []
         if fresh == 'stale':
             priorities.append('检查采集服务和笔记本在线状态。' if zh else 'Check the collector and laptop availability.')
-        if metrics['out_of_stock_rows']:
+        if inventory_risks['blocked_products']:
+            priorities.append('优先核对有库存商品的校验问题。' if zh else 'Review validation issues on stocked offers first.')
+        if inventory_risks['aged_181_plus_units']:
+            priorities.append('复核老库存的销售计划。' if zh else 'Review the sales plan for older inventory.')
+        if inventory_risks['aging_unverified_products']:
+            priorities.append('核对库存龄与总库存不一致或尚缺的数据。' if zh else 'Reconcile missing or inconsistent inventory aging.')
+        if metrics['out_of_stock_rows'] and not inventory_risks['blocked_products'] and not inventory_risks['aged_181_plus_units']:
             priorities.append('复核零库存商品的可售状态与补货需求。' if zh else 'Review zero-stock offers and replenishment needs.')
         if metrics['stock_unknown_rows']:
             priorities.append('补查库存未知的商品，不按零库存处理。' if zh else 'Investigate unknown inventory without treating it as zero.')
@@ -212,6 +248,12 @@ def build(snapshot, kind, now, timezone_name='Europe/Bucharest', locale='en', *,
         lines += ['- ' + text for text in priorities[:3]] or ['- ' + ('当前规则未发现上述待查项。' if zh else 'No checks triggered by these bounded rules.')]
         detail_lines += ['', '未计算销售额、净利润或建议售价；库存变化不等于销量。' if zh else
                   'Revenue, net profit and recommended prices are not calculated; inventory changes are not sales.',
+                  ('商品件数取采集时已完成订单中的有效商品数量，按原下单日期归组；未完成或退货订单不计入，不等于当期出库或结算销量。' if zh else
+                   'Product units use current active quantities on finalized orders, grouped by original creation date; pending/returned orders are excluded. This is not period fulfillment or settled sales.'),
+                  (f"商品明细待核对记录：本期 {product_metrics['current']['invalid_records']}，上期 {product_metrics['previous']['invalid_records']}。" if zh else
+                   f"Product records needing verification: current {product_metrics['current']['invalid_records']}, previous {product_metrics['previous']['invalid_records']}."),
+                  (f"商品件数已确认小计：本期 {figure(product_metrics['current']['known_units'])}，上期 {figure(product_metrics['previous']['known_units'])}；明细不完整时该小计不作为完整总数。" if zh else
+                   f"Known product-unit subtotal: current {figure(product_metrics['current']['known_units'])}, previous {figure(product_metrics['previous']['known_units'])}; an incomplete subtotal is not a complete total."),
                   f"{'证据快照' if zh else 'Source snapshot'}: {snapshot['snapshot_id']}"]
     result['markdown'] = '\n'.join(lines)
     result['details_markdown'] = result['markdown']
