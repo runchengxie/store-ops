@@ -216,8 +216,11 @@ Source dates and current observation times remain distinct.
 Pillow is already a runtime dependency. Chinese rendering requires a local CJK
 font. The renderer checks the configured `font_path` (absolute path), then the
 `IVYEA_OPS_REPORT_FONT` environment variable and supported installed Noto/Windows
-font locations. An explicit invalid font does not silently fall back. Chinese
-reports reject a missing-glyph font. Rendering failure leaves text delivery intact
+font locations. An explicit invalid font does not silently fall back. Every rendered character is checked for a missing glyph, including mixed-language
+product labels in English reports; unsupported glyphs fail closed. Single-line
+labels are fitted to available pixel width. Financial panels show their own
+capture time and coverage, and superseded estimates are labeled rather than
+presented as current payouts. Rendering failure leaves text delivery intact
 and returns `image_status: render_failed`; a later run may retry rendering.
 
 Text and images use independent persisted delivery claims. Images are rendered

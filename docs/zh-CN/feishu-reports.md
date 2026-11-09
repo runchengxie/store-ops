@@ -161,7 +161,7 @@ python -m app.emag_digest_delivery --config /private/config/digest.json --kind d
 
 Pillow 已是运行依赖。中文需安装 CJK 字体；可配置绝对路径 `font_path`，否则查找
 `IVYEA_OPS_REPORT_FONT` 及支持的 Noto/Windows 已安装字体位置。显式无效字体不会静默回退，
-缺失中文字形也会拒绝。渲染失败保留已发送文字，返回 `image_status: render_failed`，下次可重试渲染。
+每个实际显示字符都会检查字形，包括英文报告中的中文商品标签；缺字时明确失败。单行标签按可用像素宽度收缩。财务区展示自身采集时间和覆盖范围，被已处理记录替代的预估明确标注。渲染失败保留已发送文字，返回 `image_status: render_failed`，下次可重试渲染。
 
 文字、图片分别保存幂等记录。图片读取已发送文字留存的数据，不重新获取一份可能不同的报告。
 上传通过机器人 CLI 的二进制标准输入完成，不上传来源指定的任意文件路径/URL。

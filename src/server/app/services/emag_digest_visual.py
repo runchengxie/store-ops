@@ -88,9 +88,27 @@ def render(report, destination, *, font_path=None):
     blue = "#167d9a"
     orange = "#ba4b2b"
     y = 52
+    glyphs = {}
+    missing = fonts[28].getmask("\U0010ffff")
+    missing_shape = (missing.size, bytes(missing))
 
-    def text(x, yy, value, size=28, color=ink, limit=110):
-        draw.text((x, yy), clean(value, limit), font=fonts[size], fill=color)
+    def text(x, yy, value, size=28, color=ink, limit=110, max_width=None):
+        content = clean(value, limit)
+        width = 1060 - x if max_width is None else min(max_width, 1060 - x)
+        truncated = False
+        while content and draw.textlength(content + ("…" if truncated else ""), font=fonts[size]) > width:
+            content = content[:-1]
+            truncated = True
+        content += "…" if truncated else ""
+        for character in set(content):
+            if character.isspace():
+                continue
+            if character not in glyphs:
+                mask = fonts[28].getmask(character)
+                glyphs[character] = bool(mask.getbbox()) and (mask.size, bytes(mask)) != missing_shape
+            if not glyphs[character]:
+                raise ValueError("Report font lacks a rendered character")
+        draw.text((x, yy), content, font=fonts[size], fill=color)
 
     def wrapped(value, width=960, size=25, limit=500, color=ink):
         nonlocal y
@@ -146,7 +164,7 @@ def render(report, destination, *, font_path=None):
     text(60, y, ("更新 " if zh else "Updated ") + str(captured), 22, muted)
     y += 38
     if report.get("freshness") != "fresh":
-        text(60, y, "历史或缺失数据 / Stale or missing evidence", 25, orange)
+        text(60, y, "历史或缺失数据" if zh else "Stale or missing evidence", 25, orange)
         y += 45
     for i, (label, number, previous) in enumerate(
         [
@@ -161,8 +179,8 @@ def render(report, destination, *, font_path=None):
     ):
         x = 44 + i * 348
         draw.rounded_rectangle((x, y, x + 336, y + 170), 16, fill="white")
-        text(x + 20, y + 16, label, 22)
-        text(x + 20, y + 55, value(number), 48, blue)
+        text(x + 20, y + 16, label, 22, max_width=296)
+        text(x + 20, y + 55, value(number), 48, blue, max_width=296)
         delta = f" ({number - previous:+d})" if type(number) is int and type(previous) is int else ""
         text(x + 20, y + 122, ("上期 " if zh else "Previous ") + value(previous) + delta, 22, muted)
     y += 180
@@ -193,7 +211,7 @@ def render(report, destination, *, font_path=None):
         if current.get("all_tied"):
             wrapped(("全部商品并列；展示其中3款。" if zh else "All products tie; showing three."))
         elif current.get("cutoff_tied_products", 0) > 1:
-            wrapped("末位存在并列 / Tie at cutoff")
+            wrapped("末位存在并列" if zh else "Tie at cutoff")
         maximum = max(row["units"] for row in top) or 1
         for row in top[:3]:
             text(68, y, row["label"], 25, ink, 42)
@@ -269,9 +287,22 @@ def render(report, destination, *, font_path=None):
     if not scopes:
         wrapped("暂无已导入的结算证据，待核对。" if zh else "No imported payout evidence; reconciliation unknown.")
     for scope in scopes[:2]:
-        wrapped(f"{scope['company']} / {scope['currency']} · {scope.get('coverage', 'partial')}")
+        coverage = scope.get("coverage", "partial")
+        coverage_label = {"complete": "完整覆盖", "partial": "部分覆盖"}.get(coverage, "覆盖待核对") if zh else coverage
+        wrapped(f"{scope['company']} / {scope['currency']} · {coverage_label}")
+        wrapped(
+            ("财务数据采集时间：" if zh else "Financial evidence captured: ")
+            + str(scope.get("captured_at") or value(None))
+        )
         payouts = scope.get("payouts", [])
         for payout in payouts[-2:]:
+            superseded = payout.get("superseded_by_processed")
+            if superseded:
+                wrapped(
+                    ("预计记录已被处理记录替代：" if zh else "Estimate superseded by processed record: ")
+                    + str(superseded)
+                )
+                continue
             status = (
                 {"estimated": "预计净额", "processed": "已处理净额"}.get(payout["status"], "待核对")
                 if zh
@@ -290,7 +321,13 @@ def render(report, destination, *, font_path=None):
     heading("优先检查" if zh else "Priority actions")
     marker = "## 优先检查" if zh else "## Priority checks"
     section = report.get("markdown", "").split(marker)[-1] if marker in report.get("markdown", "") else ""
-    for line in [line[2:] for line in section.splitlines() if line.startswith("- ")][:3]:
+    actions = []
+    for line in section.splitlines():
+        if line.lstrip().startswith("#"):
+            break
+        if line.startswith("- "):
+            actions.append(line[2:])
+    for line in actions[:3]:
         wrapped("• " + line)
     y += 28
     for note in [

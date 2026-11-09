@@ -66,3 +66,115 @@ def test_latin_only_font_cannot_silently_render_chinese(tmp_path):
         pytest.skip("System Latin font not installed")
     with pytest.raises(ValueError, match="font"):
         visual.render(report(), tmp_path / "report.png", font_path=str(font))
+
+
+def test_all_drawn_text_stays_inside_canvas(tmp_path, monkeypatch):
+    from PIL import ImageDraw
+
+    original = ImageDraw.ImageDraw.text
+    boxes = []
+
+    def capture(self, xy, text, *args, **kwargs):
+        boxes.append(self.textbbox(xy, text, font=kwargs["font"]))
+        return original(self, xy, text, *args, **kwargs)
+
+    monkeypatch.setattr(ImageDraw.ImageDraw, "text", capture)
+    r = report()
+    r["store_id"] = "W" * 80
+    visual.render(r, tmp_path / "wide.png")
+    assert boxes and all(left >= 0 and right <= 1120 for left, top, right, bottom in boxes)
+
+
+def test_english_font_checks_chinese_product_label(tmp_path):
+    from pathlib import Path
+
+    font = Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
+    if not font.exists():
+        pytest.skip("System Latin font not installed")
+    r = report()
+    r["locale"] = "en"
+    r["metrics"] = {"products": {"current": {"top": [{"label": "商品一", "units": 1}]}}}
+    with pytest.raises(ValueError, match="font"):
+        visual.render(r, tmp_path / "mixed.png", font_path=str(font))
+
+
+def test_financial_scope_time_and_superseded_estimate_are_visible(tmp_path, monkeypatch):
+    from PIL import ImageDraw
+
+    drawn = []
+    original = ImageDraw.ImageDraw.text
+
+    def capture(self, xy, text, *args, **kwargs):
+        drawn.append(text)
+        return original(self, xy, text, *args, **kwargs)
+
+    monkeypatch.setattr(ImageDraw.ImageDraw, "text", capture)
+    r = report()
+    r["reconciliation"] = {
+        "scopes": [
+            {
+                "company": "Example",
+                "currency": "RON",
+                "coverage": "partial",
+                "captured_at": "2026-09-01T10:00:00+00:00",
+                "payouts": [
+                    {
+                        "id": "estimate",
+                        "status": "estimated",
+                        "payout_date": "2026-09-03",
+                        "net_amount": "100",
+                        "superseded_by_processed": "processed",
+                    },
+                    {
+                        "id": "processed",
+                        "status": "processed",
+                        "payout_date": "2026-09-03",
+                        "net_amount": "95",
+                        "superseded_by_processed": None,
+                    },
+                ],
+            }
+        ]
+    }
+    visual.render(r, tmp_path / "finance.png")
+    combined = " ".join(drawn)
+    assert "2026-09-01" in combined and "部分覆盖" in combined
+    assert "已被处理记录替代" in combined and "processed" in combined
+
+
+def test_priority_section_stops_before_financial_heading(tmp_path, monkeypatch):
+    from PIL import ImageDraw
+
+    drawn = []
+    original = ImageDraw.ImageDraw.text
+
+    def capture(self, xy, text, *args, **kwargs):
+        drawn.append(text)
+        return original(self, xy, text, *args, **kwargs)
+
+    monkeypatch.setattr(ImageDraw.ImageDraw, "text", capture)
+    r = report()
+    r["markdown"] = "# 周报\n## 优先检查\n- 库存待查\n## 费用与结算\n- FINANCIAL_NOT_AN_ACTION"
+    visual.render(r, tmp_path / "sections.png")
+    assert "库存待查" in " ".join(drawn)
+    assert "FINANCIAL_NOT_AN_ACTION" not in " ".join(drawn)
+
+
+def test_english_report_with_latin_font_has_no_hidden_chinese_literals(tmp_path):
+    from pathlib import Path
+
+    font = Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
+    if not font.exists():
+        pytest.skip("System Latin font not installed")
+    r = report()
+    r["locale"] = "en"
+    r["freshness"] = "stale"
+    r["metrics"] = {"products": {"current": {"top": [{"label": "ASCII sku", "units": 1}], "cutoff_tied_products": 2}}}
+    visual.render(r, tmp_path / "english.png", font_path=str(font))
+
+
+def test_missing_glyph_outside_single_probe_is_rejected(tmp_path):
+    r = report()
+    r["store_id"] = "sku🧑"
+    with pytest.raises(ValueError, match="font"):
+        visual.render(r, tmp_path / "unknown-glyph.png")
