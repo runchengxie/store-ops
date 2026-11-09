@@ -13,6 +13,7 @@ See [platform adapter boundaries](docs/platform-adapters.md) for the common cont
 ## Current capabilities
 
 - Read-only eMAG RO collection for offers, selected seller/FBE orders, returns, invoices and VAT data.
+- [Local fee and payout reconciliation](docs/fee-payout-reconciliation.md) from explicitly imported manual evidence; no payment or automatic financial collector.
 - Versioned snapshots, deterministic manual audit reports, bounded change previews and run receipts.
 - Administrator workspaces for inspection records, own-catalog research, plans and local Listing drafts.
 - [Source-linked local playbooks](docs/emag-playbooks.md) for repair, Listing checks, variants, comparable offers, advertising reviews, inbound packing and cost evidence.

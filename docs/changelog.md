@@ -8,6 +8,10 @@
 
 ---
 
+## 2026-11-10
+
+- Add scoped, source-backed manual fee/payout evidence imports, immutable observation revisions and explicit partial allocation links. Optional bilingual digest summaries distinguish estimates from processed payouts, preserve unallocated credits and avoid deducting fees twice; no payment, bank ingestion or automatic financial collector.
+
 ## 2026-11-09
 
 - Enrich daily/weekly reports with finalized-order product units, bounded tie-aware product rankings, stocked-offer validation issues and reconciled older-stock observations. Keep messages focused on operating results; retain window totals, source identities and detailed interpretation notes locally. Preserve material missing/partial-data warnings and inclusive readable dates.

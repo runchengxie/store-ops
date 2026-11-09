@@ -21,6 +21,8 @@ def main(argv=None):
             snapshot = None
         result = emag_digest.build(snapshot, args.kind, datetime.now(timezone.utc), args.timezone,
                                    args.locale, store_id=args.store_id)
+        from app.services import emag_reconciliation
+        result = emag_reconciliation.attach_digest(result, args.store_id, args.locale)
         from app.services.emag_digest_visual import build_visual
         result['visual'] = build_visual(snapshot, result)
         if args.save and snapshot:
