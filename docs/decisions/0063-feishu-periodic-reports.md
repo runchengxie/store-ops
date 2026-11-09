@@ -46,3 +46,13 @@ read verified the API's date-filter results against saved record identities.
 
 Use manual, stable correction IDs to deliver corrected already-confirmed reports
 without deleting their original ledger entries or weakening unknown-send gates.
+
+## Client content and local evidence
+
+The generated report separates compact delivery `markdown` from local
+`details_markdown` and structured `evidence`. Normal bot messages show operating
+results, date basis, last update and priority checks. Window-wide counts, raw
+snapshot identities and fixed statements about metrics not calculated remain
+in the local detailed report saved by `--save`. Material stale/missing/partial
+evidence remains visible in the client message. JSON period boundaries retain
+their exclusive-end contract; human dates show the actual inclusive last day.
