@@ -5,12 +5,16 @@ import unicodedata
 
 
 def label(offer, product_id):
-    value = offer.get('part_number') or offer.get('part_number_key') or 'ID ' + product_id
+    product_id = _product_id(product_id)
+    if product_id is None:
+        raise ValueError('A valid product identifier is required')
+    fallback = ('ID ' + product_id)[:48]
+    value = offer.get('part_number') or offer.get('part_number_key') or fallback
     if not isinstance(value, str):
-        value = 'ID ' + product_id
+        value = fallback
     value = re.sub(r'https?://\S+', ' ', value, flags=re.I)
     value = ''.join(' ' if unicodedata.category(c).startswith('C') or c in '[](){}<>!`*#|@\\' else c for c in value)
-    return ' '.join(value.split())[:48] or 'ID ' + product_id
+    return ' '.join(value.split())[:48] or fallback
 
 
 def _code(value, choices):
@@ -89,6 +93,9 @@ def products(current_rows, previous_rows, offers):
 
 def inventory(snapshot):
     from app.services import emag_clearance
+    identities = [_product_id(offer.get('id')) for offer in snapshot['data']['offers']]
+    if any(identity is None for identity in identities) or len(set(identities)) != len(identities):
+        raise ValueError('Inventory requires valid unique product identifiers')
     result = emag_clearance.build(snapshot)
     summary = result['summary']
     catalog = {str(offer['id']): offer for offer in snapshot['data']['offers']}

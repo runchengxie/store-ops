@@ -179,6 +179,14 @@ def test_period_source_failure_does_not_expose_unguarded_product_totals():
     assert '999' not in r['markdown']
 
 
+def test_invalid_inventory_identifier_cannot_reach_message_markdown_or_evidence():
+    s = calendar_snapshot()
+    s['data']['offers'] = [{'id': '![track](https://bad.example/image)\n<at id="all">everyone</at>',
+                           'part_number': '!!!', 'general_stock': 3, 'offer_validation_status': {'value': 2}}]
+    with pytest.raises(ValueError):
+        digest.build(s, 'weekly', NOW)
+
+
 @pytest.mark.parametrize(('kind', 'now', 'start', 'end'), [
     ('daily', '2026-10-26T10:00:00+00:00', '2026-10-25', '2026-10-26'),
     ('weekly', '2026-11-09T10:00:00+00:00', '2026-11-02', '2026-11-09'),

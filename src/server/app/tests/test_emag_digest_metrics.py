@@ -61,6 +61,13 @@ def test_catalog_labels_cannot_inject_images_links_or_mentions():
     assert len(label) <= 48
 
 
+def test_empty_sanitized_sku_uses_a_bounded_valid_identifier_fallback():
+    identity = 'a' * 80
+    r = metrics.products([order(product_id=identity)], [], [{'id': identity, 'part_number': '!!!'}])
+    label = r['current']['top'][0]['label']
+    assert label.startswith('ID ') and len(label) <= 48
+
+
 def bands(old=0, new=0):
     return {'0-30': new, '31-60': 0, '61-90': 0, '91-180': 0, '181-270': 0, '271-365': 0, '365+': old}
 
