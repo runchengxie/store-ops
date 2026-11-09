@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 
 
 def clean(value, limit=110):
-    value = re.sub(r"https?://\S+", "", str(value or ""))
+    value = re.sub(r"https?://\S+", "", "" if value is None else str(value))
     return " ".join("".join(" " if unicodedata.category(c).startswith("C") else c for c in value).split())[:limit]
 
 
@@ -219,8 +219,10 @@ def render(report, destination, *, font_path=None):
             draw.rounded_rectangle((68, y, 68 + max(2, int(row["units"] / maximum * 830)), y + 23), 6, fill=blue)
             text(940, y - 10, row["units"], 28)
             y += 50
+    elif current.get("units") == 0:
+        wrapped("本期无已完成订单商品。" if zh else "No finalized-order product units in this period.")
     else:
-        wrapped("本期无排行或明细待核对。" if zh else "No ranked units or product detail unavailable.")
+        wrapped("商品明细待核对。" if zh else "Product detail unavailable; needs verification.")
     heading("订单状态 · 采集时观测" if zh else "Order states · observed at capture")
     statuses = orders.get("current_statuses")
     labels = {
@@ -231,7 +233,9 @@ def render(report, destination, *, font_path=None):
         "4": ("已完成", "Finalized"),
         "5": ("已退货", "Returned"),
     }
-    if isinstance(statuses, dict):
+    if isinstance(statuses, dict) and not sum(statuses.values()):
+        wrapped(("本期无订单。" if zh else "No orders in this period.") if orders.get("current") == 0 else value(None))
+    elif isinstance(statuses, dict):
         total = sum(statuses.values())
         x = 68
         colors = ["#a8b7bf", "#268bb3", "#5caab8", "#6a94be", "#226b79", "#cd7652"]

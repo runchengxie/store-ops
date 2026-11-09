@@ -178,3 +178,33 @@ def test_missing_glyph_outside_single_probe_is_rejected(tmp_path):
     r["store_id"] = "sku🧑"
     with pytest.raises(ValueError, match="font"):
         visual.render(r, tmp_path / "unknown-glyph.png")
+
+
+def test_known_zero_panels_and_bars_are_distinct_from_unknown(tmp_path, monkeypatch):
+    from PIL import ImageDraw
+
+    drawn = []
+    original = ImageDraw.ImageDraw.text
+
+    def capture(self, xy, text, *args, **kwargs):
+        drawn.append(text)
+        return original(self, xy, text, *args, **kwargs)
+
+    monkeypatch.setattr(ImageDraw.ImageDraw, "text", capture)
+    r = report()
+    r["metrics"] = {"orders": {"current": 0, "current_statuses": {}}, "products": {"current": {"units": 0, "top": []}}}
+    r["visual"] = {
+        "trend": {
+            "dates": ["2026-11-02", "2026-11-03", "2026-11-04", "2026-11-05", "2026-11-06", "2026-11-07", "2026-11-08"],
+            "values": [0] * 7,
+        }
+    }
+    visual.render(r, tmp_path / "zero.png")
+    assert "本期无订单。" in drawn and "本期无已完成订单商品。" in drawn
+    assert drawn.count("0") >= 7
+    drawn.clear()
+    r["metrics"] = {}
+    r["visual"] = {}
+    visual.render(r, tmp_path / "unknown.png")
+    assert "本期无订单。" not in drawn and "本期无已完成订单商品。" not in drawn
+    assert any("待核对" in line for line in drawn)
