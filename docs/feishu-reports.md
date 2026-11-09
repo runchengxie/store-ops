@@ -251,3 +251,8 @@ The width is 1120 pixels; height and file size are bounded. Inspect real daily a
 weekly images for missing glyphs, wrapped labels and complete source notes before
 enabling scheduled image delivery. Financial coverage in the image is only as
 good as the explicitly imported reconciliation evidence.
+
+The Ubuntu `app-tests` CI job explicitly installs `fonts-noto-cjk` so Chinese
+rendering tests run against real glyphs on clean runners; they are not skipped
+when a CI image omits system fonts. Production hosts still need their own font
+installation or explicit `font_path`.

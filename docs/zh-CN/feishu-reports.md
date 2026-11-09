@@ -183,3 +183,6 @@ python -m app.emag_digest_visual_cli --report /private/data/report.json --output
 图片写入 `IVYEA_OPS_DATA_DIR/digest-images/<store>/`，不覆盖已有 output ID；返回路径和快照标识。
 宽1120像素，高度与文件大小有上限。正式启用前目视检查真实日报、周报的字体、换行和来源说明。
 图片里的财务信息仅以已明确导入的对账证据为依据。
+
+Ubuntu 的 `app-tests` CI 明确安装 `fonts-noto-cjk`，使中文渲染测试在干净环境中实际验证字形，
+不因 CI 默认缺少字体而跳过测试。生产主机仍需自行安装字体或配置 `font_path`。
