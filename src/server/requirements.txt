@@ -3,6 +3,8 @@ starlette==1.10.0
 uvicorn[standard]==0.39.0
 httpx[socks]==0.28.1
 python-dotenv>=1.0.0
+# IANA business timezones for deterministic report periods on Windows.
+tzdata>=2025.2; sys_platform == "win32"
 itsdangerous>=2.2.0
 bcrypt>=4.1.0
 pydantic>=2.9.0

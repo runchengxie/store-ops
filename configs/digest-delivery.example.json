@@ -1,0 +1,15 @@
+{
+  "enabled": false,
+  "store_id": "example-ro",
+  "app_id": "cli_example",
+  "recipient_open_id": "ou_example",
+  "timezone": "Europe/Bucharest",
+  "locale": "en",
+  "state_dir": "/private/data/store-ops/digest-delivery",
+  "cli_command": ["/private/bin/lark-cli"],
+  "source_commands": {
+    "daily": ["/private/venv/bin/python", "-m", "app.emag_digest_cli", "--store-id", "example-ro", "--kind", "daily"],
+    "weekly": ["/private/venv/bin/python", "-m", "app.emag_digest_cli", "--store-id", "example-ro", "--kind", "weekly"]
+  },
+  "timeout_seconds": 90
+}
