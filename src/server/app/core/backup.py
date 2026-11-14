@@ -51,6 +51,10 @@ _MEDIA_DIRS = {"imagegen-jobs", "image_workspace", "listing_images",
 # 备份装进去（体积指数级滚雪球），还会把**正在写的那个包自己**的半成品读进去
 # —— 压缩流已经开着，文件就在磁盘上长。
 _NEVER_BACKED_UP_DIRS = {"backups"}
+# Runtime lock files carry no data and are held under an exclusive lock. On
+# Windows reading one raises PermissionError and aborts the whole archive,
+# leaving a partial package without a manifest. Skip them instead.
+_SKIP_NAMES = {"supervisor.lock"}
 
 _PBKDF2_ROUNDS = 240_000
 
@@ -102,7 +106,7 @@ def _iter_payload(data_dir: Path, include_media: bool, exclude_dir: Optional[Pat
         name = path.name
         if name.startswith(".") and name != ".master.key":
             continue
-        if name.endswith(_SKIP_SUFFIXES):
+        if name.endswith(_SKIP_SUFFIXES) or name in _SKIP_NAMES:
             continue
         if path.is_dir():
             if name in _NEVER_BACKED_UP_DIRS:
@@ -112,7 +116,8 @@ def _iter_payload(data_dir: Path, include_media: bool, exclude_dir: Optional[Pat
             if name in _MEDIA_DIRS and not include_media:
                 continue
             for sub in sorted(path.rglob("*")):
-                if sub.is_file() and not sub.name.endswith(_SKIP_SUFFIXES):
+                if (sub.is_file() and not sub.name.endswith(_SKIP_SUFFIXES)
+                        and sub.name not in _SKIP_NAMES):
                     yield f"files/{sub.relative_to(data_dir).as_posix()}", sub, "file"
         elif path.suffix in (".sqlite3", ".db"):
             yield f"db/{name}", path, "db"

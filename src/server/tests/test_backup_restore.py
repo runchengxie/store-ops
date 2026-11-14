@@ -61,6 +61,20 @@ def test_wal_and_shm_are_not_included(data_dir):
     assert not any(n.endswith(("-wal", "-shm")) for n in names)
 
 
+def test_runtime_lock_files_are_not_included(data_dir):
+    """A running supervisor holds an exclusive lock on supervisor.lock.
+
+    Reading that file raises PermissionError on Windows, which used to abort the
+    whole archive and leave a partial backup without a manifest. It is runtime
+    state with no data, so the backup must skip it.
+    """
+    (data_dir / "supervisor").mkdir()
+    (data_dir / "supervisor" / "supervisor.lock").write_bytes(b"")
+    names = _names(backup.create(data_dir=data_dir))
+    assert "files/supervisor/supervisor.lock" not in names
+    assert backup.MANIFEST in names
+
+
 def test_media_is_excluded_by_default(data_dir):
     """data 目录实测 429MB，其中大头是可再生的图片 —— 默认不收。"""
     assert not any("imagegen-jobs" in n for n in _names(backup.create(data_dir=data_dir)))
