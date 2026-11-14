@@ -1,6 +1,7 @@
 # 更新日志
 
 - Add optional source-backed PNG daily/weekly digests alongside Feishu text, with explicit unknowns, CJK font checks and independent image delivery claims.
+- Let the daily backup complete while the Go supervisor is running: skip its runtime lock file instead of aborting the archive when that locked file cannot be read. The backup keeps its manifest and is not left as a partial package.
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循语义化版本。
 
