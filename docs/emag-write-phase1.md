@@ -52,6 +52,37 @@ If item 2 or 7 cannot be answered with a stable contract, stop: the phase
 stays a manual seller-portal workflow and this document becomes the record of
 why it was not automated.
 
+## Verified observations (2026-11-15)
+
+Recorded from an authenticated seller session in the extension-controlled
+browser. No marketplace change was submitted.
+
+- The seller centre is `https://marketplace.emag.ro`; `seller.emag.ro` redirects
+  to the storefront, and `marketplace.emag.ro/login` lands on `/dashboard` while
+  the session is authenticated.
+- **Enumeration exists.** `GET https://marketplace.emag.ro/campaign/scheduled`
+  returns JSON with `campaignsCount`, a `campaigns` array and links. The
+  response header carries
+  `x-page-type: mktp_campaign_dashboard_api_read_scheduled_campaigns_ajax`.
+- The live response on 2026-11-15 contained one campaign: `id 2417`,
+  `Chillmas Deals 2026`, window `2026-11-07T03:04+02:00` to
+  `2026-11-24T00:00+02:00`, `endPrepDate 2026-11-23T23:59+02:00`,
+  `offersCount: 1`, currency RON, `discountVsCmmpX: 50`, `campaignType: 1`,
+  `isGenius: false`, `rankingLevel: 2`, and null
+  `minStock`/`minPrice`/`maxPrice`/`maxHandlingTime`.
+- The campaign list page is `https://marketplace.emag.ro/cms/list-xb` with
+  `tagType=ACCEPTING_OFFERS`. It is server-rendered and exposes "Vezi ofertele
+  eligibile" and "Detalii Campanie" actions per campaign.
+- The eligible-offers action did not expose a stable link or a captured request,
+  so the enrolment request shape and the read-back field remain unverified.
+- Access constraint: the marketplace host challenged the automated browser with
+  a captcha ("unusual traffic from your network") and only a human-solved
+  session proceeded. Any future automated read must account for that gate.
+
+Unknown status after this session: 1 partially verified (endpoint and response
+shape), 4 partially verified (dates and prep deadline visible), 2/3/5/7
+unverified, 6 limited to an authenticated session.
+
 ## Proposed flow
 
 The flow mirrors the approved single-offer price API (ADR-0052).
