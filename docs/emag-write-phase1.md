@@ -83,6 +83,42 @@ Unknown status after this session: 1 partially verified (endpoint and response
 shape), 4 partially verified (dates and prep deadline visible), 2/3/5/7
 unverified, 6 limited to an authenticated session.
 
+## Eligible offers and the enrolment path (2026-11-16)
+
+The same human-authenticated session, one day later. No marketplace change was
+submitted.
+
+- The campaign offers page is
+  `https://marketplace.emag.ro/cms/campaign/{platformId}_{campaignId}/offers`
+  (for this store: `/cms/campaign/1_2417/offers`).
+- The page reads through GraphQL `POST /global-listing`; observed operations
+  are `sellerConfigs`, `campaign`, `campaignOffers`, `campaignOfferCmsData` and
+  `campaignOfferCommissionDiscounts`.
+- `campaign` (id `1_2417`) returned the full rule set: `campaignType
+  STANDARD_DISCOUNT`, `minimumDiscount: 50`, `excludeBlockedOffers`,
+  `excludeEOLOffers`, `excludeInactiveOffers`, `rejectOffersWithoutCmmp` and
+  `blockPriceIncrease` all true, `beforeBuffer: 0`, `afterBuffer: 180`,
+  `maxQtyPerOrder: 10`, `endDate 2026-11-24 00:00`, `endPreparationDate
+  2026-11-23 23:59`, plus an allowed-category list.
+- `campaignOffers` with `offersType: ELIGIBLE` returned eight offers on the
+  first page: `16dj`, `bloodcarpet`, `Bluespoon`, `rmpad`, `dentalw`,
+  `Catdecoration`, `witchboiler` and `cyberp5`. Each row carries `salePrice`,
+  `cmmp`, `cmmp60`, `recommendedPrice`, `maxDiscountPrice`, stock and category.
+  The portal text requires a minimum discount versus CMMP, the lowest price of
+  the previous 30 days.
+- `campaign.actions.campaignImportedFile` points at
+  `/dcv-import?dcv_import_filter[campaign]=2417&...`. Enrolment therefore
+  appears to be a **file import** (XLS) scoped to the campaign, not a
+  single-offer REST call. No enrolment mutation was identified or executed.
+- The enrolled set can be read back through the same operation with
+  `offersType: VALIDATED`; the per-offer `movedInCampaign` action carries that
+  URL.
+
+Unknown status after this session: 2 partially verified (XLS import is the
+documented path; no mutation observed), 3 partially verified (exclusions,
+`minimumDiscount`, CMMP requirement), 7 verified as a read-back shape
+(`offersType: VALIDATED`), 5 still unverified.
+
 ## Proposed flow
 
 The flow mirrors the approved single-offer price API (ADR-0052).
