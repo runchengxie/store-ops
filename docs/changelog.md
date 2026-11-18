@@ -1,5 +1,6 @@
 # 更新日志
 
+- Keep Agent console titles readable on narrow screens and restore the compact title size in the floating Agent panel.
 - Add optional source-backed PNG daily/weekly digests alongside Feishu text, with explicit unknowns, CJK font checks and independent image delivery claims.
 - Let the daily backup complete while the Go supervisor is running: skip its runtime lock file instead of aborting the archive when that locked file cannot be read. The backup keeps its manifest and is not left as a partial package.
 
