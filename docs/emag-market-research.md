@@ -56,3 +56,7 @@ Checked 2026-11-08:
 Start with authorized exports and manual evidence. Confirm fields, estimation method, coverage, data-use rights, authentication and quotas before enabling automatic collection. Keep credentials in private configuration and do not paste them into observations or CSV. Fees, VAT, warehouse addresses and advertising rules require current account-specific confirmation; historical course materials are references.
 
 Missing or old saved costs on a matched own product create a cost-verification prompt. Own-price gap prompts require a current exact single match, RO/RON and an explicitly tax-exclusive quote; delivery/specifications still need human confirmation. Historical price and Buy Button changes create review prompts, never execution instructions. Observations at equivalent UTC times are grouped; conflicting price/button values are flagged rather than arbitrarily selected. A zero-cost target-price scenario uses a minimum positive price of 0.01 RON so its margin has a defined denominator.
+
+## Pinterest trend leads
+
+Choose **Pinterest trend** in Market research. Record the keyword, exact source region or country group, observation time and a Pinterest Trends HTTPS link. PNK is optional and can be added by editing the record after identifying a candidate. Revisions retain earlier observations. The market field identifies the target marketplace, while source region identifies the Pinterest audience. Verify candidates against eMAG RO offers and saved costs. This workflow uses manual observations.
