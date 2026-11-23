@@ -73,5 +73,10 @@
   "review_buy_button_change": "Review Buy Button observation change",
   "review_own_price_gap": "Check own price against the comparable observed quote",
   "resolve_observation_conflict": "Resolve conflicting observations at the same time",
-  "invalidSavedCosts": "Saved costs contain unsupported inputs. Historical values are retained; correct and save before relying on calculations."
+  "invalidSavedCosts": "Saved costs contain unsupported inputs. Historical values are retained; correct and save before relying on calculations.",
+  "pinterest_trend": "Pinterest trend",
+  "keyword": "Trend keyword",
+  "trend_region": "Source region / country group",
+  "openTrends": "Open Pinterest Trends",
+  "trendHelp": "Keep the exact source region and verify candidates on eMAG RO. Add PNK when a candidate is identified."
 }

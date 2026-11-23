@@ -1537,3 +1537,5 @@
 ## 2026-11-03 — Repository renamed to store-ops
 
 Updated maintained repository, documentation-site, demo and issue-template links to runchengxie/store-ops. Historical audit records and upstream attribution retain their original identities.
+
+- Added manual Pinterest trend leads with source regions, revision history and optional candidate PNK links.

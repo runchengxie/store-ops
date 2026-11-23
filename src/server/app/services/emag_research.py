@@ -28,7 +28,7 @@ def database():
 
 
 FIELDS = {'kind','pnk','name','market','currency','price_basis','price','seller','comparison_key','buy_button',
-          'source_url','source_type','observed_at','period_start','period_end','performance_label','status','note'}
+          'keyword','trend_region','source_url','source_type','observed_at','period_start','period_end','performance_label','status','note'}
 
 
 def timestamp(value):
@@ -52,10 +52,10 @@ def validate(payload):
             raise ValueError('Research values must be bounded text')
         if isinstance(value, str):
             p[key] = value.strip()
-    for key in ('pnk','name','source_url','observed_at'):
+    for key in (('name','source_url','observed_at') if p.get('kind') == 'pinterest_trend' else ('pnk','name','source_url','observed_at')):
         if not p.get(key):
             raise ValueError(f'Missing {key}')
-    choices = {'kind':('opportunity','quote'), 'market':('RO','BG','HU'), 'currency':('RON','EUR','HUF'),
+    choices = {'kind':('opportunity','quote','pinterest_trend'), 'market':('RO','BG','HU'), 'currency':('RON','EUR','HUF'),
                'price_basis':('inclusive_vat','exclusive_vat','unknown'), 'source_type':('official','estimated','manual'),
                'buy_button':('yes','no','unknown'), 'status':('research','costing','hold','approved')}
     p.setdefault('buy_button','unknown')
@@ -66,6 +66,10 @@ def validate(payload):
     u = urlsplit(p['source_url'])
     if u.scheme != 'https' or not u.hostname or u.username or u.password:
         raise ValueError('Source requires a public HTTPS link without credentials')
+    if p['kind'] == 'pinterest_trend':
+        if not p.get('keyword') or not p.get('trend_region') or u.hostname != 'trends.pinterest.com':
+            raise ValueError('Trend requires keyword, source region and trends.pinterest.com URL')
+        p.setdefault('pnk', '')
     if timestamp(p['observed_at']) > datetime.now(timezone.utc):
         raise ValueError('Observation cannot be in the future')
     for key in ('period_start','period_end'):
@@ -93,7 +97,7 @@ def _insert(conn, store, snapshot_id, payload, actor, record_id=None, revision=0
         raise ValueError('Record changed; reload first')
     if old:
         prior = json.loads(old[1])['payload']
-        if any(prior.get(k) != payload.get(k) for k in ('kind','pnk','market')):
+        if any(prior.get(k) != payload.get(k) for k in (('kind','market') if prior['kind'] == 'pinterest_trend' else ('kind','pnk','market'))):
             raise ValueError('Record identity is immutable; create a new observation')
     body = {'record_id':record_id,'revision':revision+1,'snapshot_id':snapshot_id,'actor':actor,
             'created_at':datetime.now(timezone.utc).isoformat(),'payload':payload,'schema_version':1}
@@ -135,7 +139,7 @@ def view(store):
         records = list(latest.values())
         for row in records:
             row['stale'] = row['snapshot_id'] != snap['snapshot_id']
-            ids = [str(o['id']) for o in snap['data']['offers'] if o.get('part_number_key') == row['payload']['pnk'] and row['payload']['market'] == 'RO']
+            ids = [str(o['id']) for o in snap['data']['offers'] if row['payload'].get('pnk') and o.get('part_number_key') == row['payload']['pnk'] and row['payload']['market'] == 'RO']
             row['match'] = {'status':'matched' if len(ids)==1 else 'ambiguous' if ids else 'absent','product_ids':ids}
         groups = {}
         for row in records:

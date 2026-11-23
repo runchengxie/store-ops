@@ -73,5 +73,10 @@
   "review_buy_button_change": "核对购买按钮观察变化",
   "review_own_price_gap": "核对本店售价与可比观察报价的差距",
   "resolve_observation_conflict": "核对同一时刻互相冲突的观察",
-  "invalidSavedCosts": "已保存成本包含无法计算的输入。历史值仍保留，请修正并保存后再使用测算。"
+  "invalidSavedCosts": "已保存成本包含无法计算的输入。历史值仍保留，请修正并保存后再使用测算。",
+  "pinterest_trend": "Pinterest 趋势",
+  "keyword": "趋势关键词",
+  "trend_region": "来源地区或国家组",
+  "openTrends": "打开 Pinterest Trends",
+  "trendHelp": "保留完整来源地区，并在 eMAG RO 核验候选商品。找到候选后可补充 PNK。"
 }

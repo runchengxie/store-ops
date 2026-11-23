@@ -115,3 +115,17 @@ def test_quote_changes_cost_gaps_and_comparable_own_price_make_prompts(snapshot)
     s.import_rows('demo-ro',snap['snapshot_id'],[observation(price='90',price_basis='exclusive_vat',buy_button='no'),observation(price='80',price_basis='exclusive_vat',buy_button='yes',observed_at='2026-11-07T01:00:00Z')],'a')
     reasons={p['reason'] for p in s.view('demo-ro')['prompts']}
     assert {'review_price_change','review_buy_button_change','review_own_price_gap','confirm_costs'} <= reasons
+
+
+def test_pinterest_trend_without_pnk_can_link_candidate(snapshot):
+    s = service()
+    snap = snapshot()
+    payload = observation(kind='pinterest_trend', pnk='', keyword='table decor',
+                          trend_region='PL+RO+HU+SK+CZ', source_url='https://trends.pinterest.com/', price='')
+    row = s.save('demo-ro', snap['snapshot_id'], payload, 'operator')
+    assert s.view('demo-ro')['records'][0]['match']['status'] == 'absent'
+    s.save('demo-ro', snap['snapshot_id'], {**payload, 'pnk': 'PNK123'}, 'operator', row['record_id'], 1)
+    assert s.view('demo-ro')['records'][0]['match']['status'] == 'matched'
+    for changes in ({'keyword': ''}, {'trend_region': ''}, {'source_url': 'https://example.com/'}):
+        with pytest.raises(ValueError):
+            s.validate({**payload, **changes})
